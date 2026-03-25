@@ -5,18 +5,18 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License"/></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10+-3b82f6?style=for-the-badge" alt="Python"/></a>
-  <a href="#-output-structure"><img src="https://img.shields.io/badge/outputs-12_sections-f59e0b?style=for-the-badge" alt="12 Output Sections"/></a>
-  <a href="#-quiz-types"><img src="https://img.shields.io/badge/quiz-6_types-a855f7?style=for-the-badge" alt="6 Quiz Types"/></a>
+  <a href="#output-structure"><img src="https://img.shields.io/badge/outputs-12_sections-f59e0b?style=for-the-badge" alt="12 Output Sections"/></a>
+  <a href="#quiz-types"><img src="https://img.shields.io/badge/quiz-6_types-a855f7?style=for-the-badge" alt="6 Quiz Types"/></a>
 </p>
 
 <p align="center">
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-demo">Demo</a> •
-  <a href="#-output-structure">Output</a> •
-  <a href="#%EF%B8%8F-environment-variables">Config</a> •
-  <a href="#-cli-reference">CLI</a> •
-  <a href="#-python-api">API</a> •
-  <a href="#-faq">FAQ</a>
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#demo">Demo</a> •
+  <a href="#output-structure">Output</a> •
+  <a href="#environment-variables">Config</a> •
+  <a href="#cli-reference">CLI</a> •
+  <a href="#python-api">API</a> •
+  <a href="#faq">FAQ</a>
 </p>
 
 ---
@@ -46,8 +46,6 @@ AI agents are getting smarter, but **humans still learn the same broken way** �
 
 <p align="center">
   <b><a href="https://syuan03.github.io/Skill-Anything/assets/demo.html">▶ Open Interactive Demo (GitHub Pages)</a></b>
-  &nbsp;|&nbsp;
-  <b><a href="https://htmlpreview.github.io/?https://github.com/SYuan03/Skill-Anything/blob/main/assets/demo.html">▶ Mirror (htmlpreview)</a></b>
   <br/>
   <sub>Full interactive demo with generation pipeline animation, quiz session, and output explorer.</sub>
 </p>

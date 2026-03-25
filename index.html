@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Skill-Anything | Any Source → Interactive Skills</title>
+<meta name="description" content="Convert PDF, Video, Web, Text into quizzes, flashcards, structured study notes, practice exercises, and concept maps."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0c0f1a;
+  --bg2: #131729;
+  --bg3: #1a1f35;
+  --surf: #222845;
+  --border: #2a3055;
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45,212,191,.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,.12);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,.12);
+  --green: #34d399;
+  --green-dim: rgba(52,211,153,.12);
+  --rose: #fb7185;
+  --rose-dim: rgba(251,113,133,.12);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96,165,250,.12);
+  --ink: #f1f5f9;
+  --ink2: #94a3b8;
+  --ink3: #64748b;
+  --font: 'Inter', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── NAV ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(12,15,26,.85);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  height: 60px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-inner {
+  max-width: 1200px; width: 100%; padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-brand {
+  font-weight: 800; font-size: 18px; letter-spacing: -.5px;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-brand span { color: var(--teal); }
+.nav-links { display: flex; gap: 6px; }
+.nav-links a {
+  font-size: 13px; font-weight: 500; color: var(--ink2);
+  padding: 6px 14px; border-radius: 6px;
+  transition: all .15s;
+}
+.nav-links a:hover { color: var(--ink); background: var(--bg3); }
+.nav-gh {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  padding: 8px 18px; border-radius: 8px;
+  background: var(--surf); border: 1px solid var(--border);
+  transition: all .2s;
+}
+.nav-gh:hover { background: var(--bg3); border-color: var(--teal); color: var(--teal); }
+.nav-gh svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 160px 32px 100px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(45,212,191,.08) 0%, rgba(167,139,250,.05) 40%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--teal); background: var(--teal-dim);
+  padding: 6px 18px; border-radius: 20px; border: 1px solid rgba(45,212,191,.2);
+  margin-bottom: 28px;
+}
+.hero h1 {
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 800; letter-spacing: -2px; line-height: 1.05;
+  margin-bottom: 20px;
+}
+.hero h1 .grad {
+  background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 50%, var(--amber) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: 18px; color: var(--ink2); max-width: 640px; margin: 0 auto 40px;
+  line-height: 1.7;
+}
+.hero-actions {
+  display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600;
+  padding: 14px 32px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal), #14b8a6);
+  color: var(--bg); transition: all .2s;
+  box-shadow: 0 4px 20px rgba(45,212,191,.25);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(45,212,191,.35); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600;
+  padding: 14px 32px; border-radius: 10px;
+  background: var(--surf); border: 1px solid var(--border);
+  color: var(--ink); transition: all .2s;
+}
+.btn-secondary:hover { border-color: var(--purple); color: var(--purple); transform: translateY(-2px); }
+
+/* ── CODE BLOCK ── */
+.hero-code {
+  max-width: 520px; margin: 48px auto 0;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 28px; text-align: left;
+  font-family: var(--mono); font-size: 14px; color: var(--ink2);
+}
+.hero-code .prompt { color: var(--teal); }
+.hero-code .cmd { color: var(--ink); }
+.hero-code .comment { color: var(--ink3); }
+
+/* ── SECTION ── */
+.section {
+  max-width: 1200px; margin: 0 auto;
+  padding: 80px 32px;
+}
+.section-label {
+  font-size: 12px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 12px;
+}
+.section-title {
+  font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 16px;
+}
+.section-desc {
+  font-size: 16px; color: var(--ink2); max-width: 600px; margin-bottom: 48px;
+}
+
+/* ── PIPELINE ── */
+.pipeline {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  flex-wrap: wrap; margin-bottom: 64px;
+}
+.pipe-group {
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.pipe-group-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink3); margin-bottom: 4px;
+}
+.pipe-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.pipe-tag {
+  font-size: 13px; font-weight: 600; padding: 8px 16px;
+  border-radius: 8px; border: 1px solid;
+}
+.pipe-tag.in { color: var(--teal); background: var(--teal-dim); border-color: rgba(45,212,191,.25); }
+.pipe-tag.out { color: var(--purple); background: var(--purple-dim); border-color: rgba(167,139,250,.25); }
+.pipe-arrow {
+  font-size: 24px; color: var(--ink3); flex-shrink: 0;
+}
+
+/* ── FEATURE GRID ── */
+.features {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+.feat {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 32px; transition: all .25s;
+}
+.feat:hover { border-color: var(--teal); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+.feat-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 18px;
+}
+.feat-icon.teal { background: var(--teal-dim); color: var(--teal); }
+.feat-icon.purple { background: var(--purple-dim); color: var(--purple); }
+.feat-icon.amber { background: var(--amber-dim); color: var(--amber); }
+.feat-icon.green { background: var(--green-dim); color: var(--green); }
+.feat-icon.rose { background: var(--rose-dim); color: var(--rose); }
+.feat-icon.blue { background: var(--blue-dim); color: var(--blue); }
+.feat h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.feat p { font-size: 14px; color: var(--ink2); line-height: 1.65; }
+
+/* ── DEMO SECTION ── */
+.demo-container {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+  overflow: hidden;
+}
+.demo-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px; background: var(--bg3); border-bottom: 1px solid var(--border);
+}
+.demo-dot { width: 12px; height: 12px; border-radius: 50%; }
+.demo-dot.r { background: #ef4444; }
+.demo-dot.y { background: #f59e0b; }
+.demo-dot.g { background: #22c55e; }
+.demo-title-bar {
+  flex: 1; text-align: center;
+  font-size: 12px; font-family: var(--mono); color: var(--ink3);
+}
+.demo-body { padding: 24px; text-align: center; }
+.demo-body img {
+  max-width: 100%; border-radius: 8px;
+}
+.demo-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 16px; font-size: 14px; font-weight: 600;
+  color: var(--teal); transition: all .15s;
+}
+.demo-link:hover { text-decoration: underline; }
+
+/* ── STATS ── */
+.stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+  margin-bottom: 64px;
+}
+.stat {
+  text-align: center; padding: 28px 20px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+}
+.stat-val {
+  font-size: 40px; font-weight: 800; letter-spacing: -1px; line-height: 1;
+  margin-bottom: 6px;
+}
+.stat-val.teal { color: var(--teal); }
+.stat-val.purple { color: var(--purple); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.green { color: var(--green); }
+.stat-label { font-size: 13px; color: var(--ink3); font-weight: 500; }
+
+/* ── QUICK START ── */
+.steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.step {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 28px;
+}
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  background: var(--teal-dim); color: var(--teal);
+  margin-bottom: 14px;
+}
+.step h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+.step code {
+  display: block; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; margin-top: 10px;
+  font-family: var(--mono); font-size: 13px; color: var(--teal);
+  overflow-x: auto;
+}
+
+/* ── FOOTER ── */
+.footer {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px 32px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+}
+.footer-left { font-size: 14px; color: var(--ink3); }
+.footer-left b { color: var(--ink); font-weight: 700; }
+.footer-right { display: flex; gap: 20px; }
+.footer-right a {
+  font-size: 13px; color: var(--ink3); font-weight: 500;
+  transition: color .15s;
+}
+.footer-right a:hover { color: var(--teal); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim { opacity: 0; animation: fadeUp .6s ease forwards; }
+.anim-d1 { animation-delay: .1s; }
+.anim-d2 { animation-delay: .2s; }
+.anim-d3 { animation-delay: .3s; }
+.anim-d4 { animation-delay: .4s; }
+.anim-d5 { animation-delay: .5s; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .hero { padding: 130px 20px 60px; }
+  .hero h1 { font-size: 36px; letter-spacing: -1px; }
+  .hero-sub { font-size: 16px; }
+  .section { padding: 60px 20px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .pipeline { flex-direction: column; }
+  .pipe-arrow { transform: rotate(90deg); }
+  .footer { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-brand">
+      <span>Skill</span>-Anything
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#demo">Demo</a>
+      <a href="#quickstart">Quick Start</a>
+    </div>
+    <a href="https://github.com/SYuan03/Skill-Anything" class="nav-gh" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge anim">Open Source Learning Tool</div>
+  <h1 class="anim anim-d1"><span class="grad">Skill-Anything</span></h1>
+  <p class="hero-sub anim anim-d2">
+    Any Source &rarr; Interactive Skills.<br/>
+    Convert PDF, Video, Web, and Text into quizzes, flashcards, structured study notes, practice exercises, and concept maps.
+  </p>
+  <div class="hero-actions anim anim-d3">
+    <a href="https://github.com/SYuan03/Skill-Anything#quick-start" class="btn-primary" target="_blank" rel="noopener">
+      Get Started &rarr;
+    </a>
+    <a href="#demo" class="btn-secondary">
+      View Demo
+    </a>
+  </div>
+  <div class="hero-code anim anim-d4">
+    <div><span class="prompt">$</span> <span class="cmd">pip install skill-anything[all]</span></div>
+    <div><span class="prompt">$</span> <span class="cmd">sa auto paper.pdf</span> <span class="comment">&nbsp;# generates quiz + flashcards + notes</span></div>
+    <div><span class="prompt">$</span> <span class="cmd">sa quiz output/paper.yaml</span> <span class="comment">&nbsp;# interactive quiz</span></div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section class="section" id="features">
+  <div class="section-label anim">How It Works</div>
+  <div class="section-title anim anim-d1">Any Source In, Skills Out</div>
+  <div class="section-desc anim anim-d2">One command transforms any learning material into a complete, interactive study package.</div>
+
+  <div class="pipeline anim anim-d3">
+    <div class="pipe-group">
+      <div class="pipe-group-label">Inputs</div>
+      <div class="pipe-tags">
+        <span class="pipe-tag in">PDF</span>
+        <span class="pipe-tag in">Video</span>
+        <span class="pipe-tag in">Web</span>
+        <span class="pipe-tag in">Text</span>
+      </div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-group">
+      <div class="pipe-group-label">Skill-Anything</div>
+      <div class="pipe-tags">
+        <span class="pipe-tag" style="color:var(--amber);background:var(--amber-dim);border-color:rgba(251,191,36,.25);">AI Engine</span>
+      </div>
+    </div>
+    <div class="pipe-arrow">&rarr;</div>
+    <div class="pipe-group">
+      <div class="pipe-group-label">Outputs</div>
+      <div class="pipe-tags">
+        <span class="pipe-tag out">Quiz</span>
+        <span class="pipe-tag out">Flashcards</span>
+        <span class="pipe-tag out">Notes</span>
+        <span class="pipe-tag out">Exercises</span>
+        <span class="pipe-tag out">Concept Map</span>
+        <span class="pipe-tag out">Cheat Sheet</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val teal">12</div>
+      <div class="stat-label">Study Guide Sections</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val purple">6</div>
+      <div class="stat-label">Quiz Question Types</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val amber">4</div>
+      <div class="stat-label">Source Formats</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val green">80%+</div>
+      <div class="stat-label">Active Recall Retention</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="features">
+    <div class="feat">
+      <div class="feat-icon teal">&#x1F4DD;</div>
+      <h3>12-Section Study Guide</h3>
+      <p>Auto-generated notes, summary, glossary, cheat sheet, and concept map from any source material.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon purple">&#x2753;</div>
+      <h3>6 Quiz Types</h3>
+      <p>MCQ, True/False, Fill-in-the-blank, Short Answer, Scenario, and Comparison questions with A-F grading.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon amber">&#x1F5C3;</div>
+      <h3>Spaced Repetition</h3>
+      <p>Auto-generated flashcards with multi-round CLI review mode for long-term retention.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon green">&#x1F310;</div>
+      <h3>Any Source</h3>
+      <p>PDF, YouTube videos, web pages, Markdown &mdash; auto-detect and extract knowledge from any format.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon rose">&#x1F916;</div>
+      <h3>Any LLM</h3>
+      <p>Works with OpenAI, DeepSeek, Qwen, Ollama, or any OpenAI-compatible API. Falls back to rule-based generation.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon blue">&#x1F4E6;</div>
+      <h3>Structured YAML Output</h3>
+      <p>Machine-readable YAML output consumable by CLI tools, AI agents, or your own pipelines.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="section" id="demo">
+  <div class="section-label">Demo</div>
+  <div class="section-title">See It In Action</div>
+  <div class="section-desc">Full interactive demo with generation pipeline animation, quiz session, and output explorer.</div>
+
+  <div class="demo-container">
+    <div class="demo-header">
+      <div class="demo-dot r"></div>
+      <div class="demo-dot y"></div>
+      <div class="demo-dot g"></div>
+      <div class="demo-title-bar">skill-anything &mdash; demo</div>
+    </div>
+    <div class="demo-body">
+      <img src="assets/demo.gif" alt="Skill-Anything Demo"/>
+      <br/>
+      <a href="assets/demo.html" class="demo-link">
+        Open Interactive Demo &rarr;
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section class="section" id="quickstart">
+  <div class="section-label">Quick Start</div>
+  <div class="section-title">Up and Running in 3 Steps</div>
+  <div class="section-desc">From install to your first interactive quiz in under a minute.</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Install</h3>
+      <p style="color:var(--ink2);font-size:14px;">Install via pip with all source format support.</p>
+      <code>pip install skill-anything[all]</code>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Generate</h3>
+      <p style="color:var(--ink2);font-size:14px;">Point it at any source &mdash; PDF, video, web, or text.</p>
+      <code>sa auto paper.pdf</code>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Learn</h3>
+      <p style="color:var(--ink2);font-size:14px;">Take an interactive quiz, review flashcards, or browse the study guide.</p>
+      <code>sa quiz output/paper.yaml</code>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-left">
+    <b>Skill-Anything</b> &mdash; Stop consuming. Start retaining.
+  </div>
+  <div class="footer-right">
+    <a href="https://github.com/SYuan03/Skill-Anything" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/SYuan03/Skill-Anything/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    <a href="https://github.com/SYuan03/Skill-Anything#python-api" target="_blank" rel="noopener">API Docs</a>
+  </div>
+</footer>
+
+</body>
+</html>
