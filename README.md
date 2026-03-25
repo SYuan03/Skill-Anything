@@ -1,10 +1,74 @@
-<h1 align="center">Skill-Anything</h1>
+<div align="center" style="max-width:980px;margin:0 auto;padding:18px 0 10px;">
+  <div style="position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(148,163,184,0.25);background:
+    radial-gradient(1000px 340px at 15% -10%, rgba(34,211,238,0.35), transparent 60%),
+    radial-gradient(900px 380px at 85% 0%, rgba(167,139,250,0.35), transparent 55%),
+    linear-gradient(135deg, rgba(17,24,39,1), rgba(7,8,20,1));
+    box-shadow: 0 24px 80px rgba(0,0,0,0.65);">
+    <svg viewBox="0 0 1200 260" preserveAspectRatio="none" width="100%" height="260" style="position:absolute;inset:0;pointer-events:none;opacity:0.95;">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#22d3ee" stop-opacity="0.75"/>
+          <stop offset="0.5" stop-color="#a78bfa" stop-opacity="0.7"/>
+          <stop offset="1" stop-color="#fbbf24" stop-opacity="0.55"/>
+        </linearGradient>
+      </defs>
+      <path d="M0,150 C120,80 240,220 360,150 C480,80 600,220 720,150 C840,80 960,220 1080,150 C1140,120 1170,110 1200,100 L1200,260 L0,260 Z" fill="url(#g1)" opacity="0.25"></path>
+      <path d="M-40,70 C90,10 210,120 340,78 C470,36 570,140 700,92 C830,44 960,128 1100,84 C1160,66 1200,58 1240,50" fill="none" stroke="#22d3ee" stroke-opacity="0.35" stroke-width="2"/>
+      <path d="M-40,120 C90,60 210,170 340,128 C470,86 570,190 700,142 C830,94 960,178 1100,134 C1160,116 1200,108 1240,100" fill="none" stroke="#a78bfa" stroke-opacity="0.32" stroke-width="2"/>
+      <path d="M-40,170 C90,110 210,220 340,178 C470,136 570,240 700,192 C830,144 960,228 1100,184 C1160,166 1200,158 1240,150" fill="none" stroke="#fbbf24" stroke-opacity="0.22" stroke-width="2"/>
+    </svg>
 
-<h3 align="center">Any Source → Interactive Skills</h3>
+    <div style="position:relative;padding:46px 24px 26px;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+      <div style="flex:1 1 380px;min-width:320px;">
+        <div style="font-size:54px;font-weight:900;letter-spacing:-1.5px;line-height:1;color:#ffffff;">
+          Skill-Anything
+        </div>
+        <div style="margin-top:10px;font-size:18px;font-weight:700;letter-spacing:2px;color:rgba(226,232,240,0.85);text-transform:uppercase;">
+          Any Source → Interactive Skills
+        </div>
+        <div style="margin-top:14px;color:rgba(203,213,225,0.9);font-size:14px;line-height:1.6;max-width:560px;">
+          Convert PDF / Video / Web / Text into quizzes, flashcards, structured study notes, practice exercises, and a concept map.
+        </div>
 
-<p align="center">
-  PDF · Video · Web · Text&nbsp;&nbsp;→&nbsp;&nbsp;Quiz · Flashcards · Notes · Exercises · Concept Map
-</p>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;">
+          <a href="#-quick-start" style="text-decoration:none;">
+            <span style="display:inline-block;padding:10px 18px;border-radius:10px;background:rgba(34,211,238,0.14);border:1px solid rgba(34,211,238,0.35);color:#67e8f9;font-weight:800;">
+              Quick Start
+            </span>
+          </a>
+          <a href="https://raw.githubusercontent.com/Skill-Anything/Skill-Anything/main/assets/demo.html" style="text-decoration:none;">
+            <span style="display:inline-block;padding:10px 18px;border-radius:10px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.35);color:#c4b5fd;font-weight:800;">
+              ▶ Open Demo
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <div style="flex:0 0 auto;display:flex;gap:22px;align-items:center;">
+        <div style="min-width:220px;">
+          <div style="color:rgba(148,163,184,0.9);font-weight:800;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;">Inputs</div>
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);color:#67e8f9;font-weight:800;">PDF</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);color:#67e8f9;font-weight:800;">Video</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);color:#67e8f9;font-weight:800;">Web</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.25);color:#67e8f9;font-weight:800;">Text</span>
+          </div>
+        </div>
+
+        <div style="min-width:260px;">
+          <div style="color:rgba(148,163,184,0.9);font-weight:800;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;">Outputs</div>
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);color:#c4b5fd;font-weight:800;">Quiz</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);color:#c4b5fd;font-weight:800;">Flashcards</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);color:#fcd34d;font-weight:800;">Notes</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);color:#fcd34d;font-weight:800;">Exercises</span>
+            <span style="padding:8px 10px;border-radius:10px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);color:#86efac;font-weight:800;">Concept Map</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License"/></a>
@@ -45,9 +109,16 @@ AI agents are getting smarter, but **humans still learn the same broken way** �
 ## Demo
 
 <p align="center">
-  <b><a href="https://htmlpreview.github.io/?https://github.com/Skill-Anything/Skill-Anything/blob/main/assets/demo.html">▶ Open Interactive Demo</a></b>
+  <b><a href="https://raw.githubusercontent.com/Skill-Anything/Skill-Anything/main/assets/demo.html">▶ Open Interactive Demo</a></b>
   <br/>
   <sub>See the full generation pipeline, interactive quiz, and output explorer — all in your browser.</sub>
+</p>
+
+<p align="center" style="margin-top:8px;">
+  <sub>
+    如果你是看你自己 fork 的 README，建议点这里（在当前仓库打开 raw 文件）：
+    <a href="./assets/demo.html?raw=1">./assets/demo.html?raw=1</a>
+  </sub>
 </p>
 
 The interactive demo showcases three scenes:
