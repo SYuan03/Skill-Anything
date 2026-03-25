@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Skill-Anything Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden}
+.container{width:900px;padding:40px}
+.header{text-align:center;margin-bottom:40px}
+.header h1{font-size:42px;font-weight:800;background:linear-gradient(135deg,#06b6d4,#8b5cf6,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.header p{color:#94a3b8;font-size:16px;letter-spacing:0.5px}
+.terminal{background:#111827;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(6,182,212,0.1);border:1px solid #1e293b}
+.titlebar{background:#1e293b;padding:10px 16px;display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot.r{background:#ef4444}.dot.y{background:#f59e0b}.dot.g{background:#22c55e}
+.titlebar span{color:#64748b;font-size:13px;font-family:'JetBrains Mono',monospace;margin-left:8px}
+.term-body{padding:24px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.7;min-height:420px}
+.line{opacity:0;transform:translateY(4px);white-space:pre-wrap}
+.line.visible{opacity:1;transform:translateY(0);transition:opacity 0.3s,transform 0.3s}
+.prompt{color:#06b6d4}.cmd{color:#f8fafc;font-weight:700}
+.success{color:#22c55e}.cyan{color:#06b6d4}.yellow{color:#f59e0b}.purple{color:#a78bfa}
+.dim{color:#64748b}.bold{font-weight:700}.white{color:#f8fafc}
+.output-box{border:1px solid #334155;border-radius:8px;padding:12px 16px;margin:8px 0;background:#0f172a}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+.stat-row{display:flex;justify-content:space-between}
+.stat-label{color:#94a3b8}.stat-val{font-weight:700}
+.tree-line{color:#334155}.file{color:#22c55e}
+.phase-label{display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size:12px;color:#94a3b8}
+.cursor-blink{display:inline-block;width:8px;height:16px;background:#06b6d4;animation:blink 1s step-end infinite;vertical-align:middle}
+@keyframes blink{50%{opacity:0}}
+.replay-btn{display:block;margin:20px auto 0;background:linear-gradient(135deg,#06b6d4,#8b5cf6);border:none;color:white;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:transform 0.15s,box-shadow 0.15s}
+.replay-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(6,182,212,0.3)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Skill-Anything</h1>
+    <p>Any Source &rarr; Interactive Skills</p>
+  </div>
+  <div class="terminal">
+    <div class="titlebar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <span>skill-anything &mdash; demo</span>
+    </div>
+    <div class="term-body" id="term"></div>
+  </div>
+  <button class="replay-btn" id="replay" onclick="runDemo()">&#x21bb; Replay</button>
+</div>
+<script>
+const lines = [
+  { html: '<span class="prompt">$</span> <span class="cmd">sa auto https://youtube.com/watch?v=dQw4w9WgXcQ</span>', delay: 0 },
+  { html: '', delay: 400 },
+  { html: '<span class="dim">  Skill-Anything v1.0.0</span>', delay: 200 },
+  { html: '<span class="dim">  Auto-detecting: YouTube video</span>', delay: 300 },
+  { html: '', delay: 200 },
+  { html: '<span class="phase-label">PARSE</span> <span class="cyan">Extracting transcript...</span> <span class="dim">47 segments</span>', delay: 600 },
+  { html: '<span class="phase-label">PARSE</span> <span class="cyan">Chunking knowledge...</span> <span class="dim">8 chunks</span>', delay: 500 },
+  { html: '', delay: 200 },
+  { html: '<span class="phase-label">GENERATE</span> <span class="purple">Structured notes + glossary + cheat sheet...</span>', delay: 700 },
+  { html: '<span class="phase-label">GENERATE</span> <span class="purple">Quiz questions (6 types)...</span> <span class="dim">24 questions</span>', delay: 600 },
+  { html: '<span class="phase-label">GENERATE</span> <span class="purple">Flashcards...</span> <span class="dim">30 cards</span>', delay: 500 },
+  { html: '<span class="phase-label">GENERATE</span> <span class="purple">Practice exercises...</span> <span class="dim">6 exercises</span>', delay: 500 },
+  { html: '<span class="phase-label">GENERATE</span> <span class="purple">Concept map image...</span> <span class="dim">1024x1024</span>', delay: 600 },
+  { html: '', delay: 300 },
+  { html: '<span class="success bold">✓ Skill pack generated successfully!</span>', delay: 400 },
+  { html: '', delay: 200 },
+  { html: '<div class="output-box"><div class="stats-grid"><div class="stat-row"><span class="stat-label">Key Concepts</span><span class="stat-val cyan">12</span></div><div class="stat-row"><span class="stat-label">Glossary Terms</span><span class="stat-val cyan">18</span></div><div class="stat-row"><span class="stat-label">Quiz Questions</span><span class="stat-val cyan">24</span></div><div class="stat-row"><span class="stat-label">Flashcards</span><span class="stat-val cyan">30</span></div><div class="stat-row"><span class="stat-label">Exercises</span><span class="stat-val cyan">6</span></div><div class="stat-row"><span class="stat-label">Cheat Sheet</span><span class="stat-val success">✓</span></div><div class="stat-row"><span class="stat-label">Detailed Notes</span><span class="stat-val success">✓</span></div><div class="stat-row"><span class="stat-label">Learning Path</span><span class="stat-val success">✓</span></div></div></div>', delay: 100 },
+  { html: '', delay: 300 },
+  { html: '<span class="tree-line">  output/</span>', delay: 150 },
+  { html: '<span class="tree-line">  ├── </span><span class="file">video-content.yaml</span>     <span class="dim">← data</span>', delay: 150 },
+  { html: '<span class="tree-line">  ├── </span><span class="file">video-content.md</span>       <span class="dim">← study guide</span>', delay: 150 },
+  { html: '<span class="tree-line">  └── </span><span class="file">video-content-map.png</span>  <span class="dim">← concept map</span>', delay: 150 },
+  { html: '', delay: 400 },
+  { html: '<span class="prompt">$</span> <span class="cmd">sa quiz output/video-content.yaml</span>', delay: 600 },
+  { html: '', delay: 300 },
+  { html: '<span class="dim">  ─── Q1/24 ───  </span><span class="yellow">MEDIUM</span>  <span class="dim">(Scenario)</span>', delay: 400 },
+  { html: '', delay: 200 },
+  { html: '<span class="white bold">  You are building a recommendation system for a</span>', delay: 100 },
+  { html: '<span class="white bold">  streaming platform. Which approach is most effective?</span>', delay: 300 },
+  { html: '', delay: 200 },
+  { html: '<span class="dim">    A. Rule-based filtering</span>', delay: 100 },
+  { html: '<span class="dim">    B. Collaborative filtering with user embeddings</span>', delay: 100 },
+  { html: '<span class="dim">    C. Random selection</span>', delay: 100 },
+  { html: '<span class="dim">    D. Alphabetical sorting</span>', delay: 300 },
+  { html: '', delay: 200 },
+  { html: '<span class="prompt">  Answer > </span><span class="white bold">B</span>', delay: 500 },
+  { html: '<span class="success">  ✓ Correct!</span>', delay: 300 },
+  { html: '<span class="dim">  Collaborative filtering leverages user behavior patterns...</span>', delay: 200 },
+  { html: '', delay: 500 },
+  { html: '<span class="dim">  ─── Results ─────────────────────────────</span>', delay: 300 },
+  { html: '<span class="white">  Score: </span><span class="success bold">22/24 (92%)</span><span class="white">  Grade: </span><span class="success bold">A</span>', delay: 400 },
+  { html: '', delay: 300 },
+  { html: '<span class="prompt">$</span> <span class="cursor-blink"></span>', delay: 0 },
+];
+let timer;
+function runDemo() {
+  clearTimeout(timer);
+  const t = document.getElementById('term');
+  t.innerHTML = '';
+  let i = 0;
+  function show() {
+    if (i >= lines.length) return;
+    const l = lines[i];
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.innerHTML = l.html;
+    t.appendChild(div);
+    requestAnimationFrame(() => { div.classList.add('visible') });
+    t.scrollTop = t.scrollHeight;
+    i++;
+    timer = setTimeout(show, l.delay + 80);
+  }
+  show();
+}
+runDemo();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Core
+typer>=0.9.0
+rich>=13.0.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+openai>=1.0.0
+httpx>=0.27.0
+
+# PDF parsing (any one of these works, pdfplumber preferred)
+pdfplumber>=0.10.0
+# pymupdf>=1.23.0      # alternative: `pip install pymupdf`
+# pypdf>=4.0.0          # alternative: `pip install pypdf`
+
+# Video transcript extraction
+youtube-transcript-api>=1.0.0
+
+# Web scraping
+beautifulsoup4>=4.12.0
