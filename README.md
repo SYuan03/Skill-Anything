@@ -45,9 +45,9 @@ AI agents are getting smarter, but **humans still learn the same broken way** �
 </p>
 
 <p align="center">
-  <b><a href="https://skill-anything.github.io/Skill-Anything/assets/demo.html">▶ Open Interactive Demo (GitHub Pages)</a></b>
+  <b><a href="https://syuan03.github.io/Skill-Anything/assets/demo.html">▶ Open Interactive Demo (GitHub Pages)</a></b>
   &nbsp;|&nbsp;
-  <b><a href="https://htmlpreview.github.io/?https://github.com/Skill-Anything/Skill-Anything/blob/main/assets/demo.html">▶ Mirror (htmlpreview)</a></b>
+  <b><a href="https://htmlpreview.github.io/?https://github.com/SYuan03/Skill-Anything/blob/main/assets/demo.html">▶ Mirror (htmlpreview)</a></b>
   <br/>
   <sub>Full interactive demo with generation pipeline animation, quiz session, and output explorer.</sub>
 </p>
