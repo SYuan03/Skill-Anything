@@ -73,11 +73,7 @@ xdg-open Skill-Anything/assets/demo.html  # Linux
 
 ### 1. Install
 
-```bash
-pip install skill-anything[all]
-```
-
-<details><summary><b>From source (development)</b></summary>
+Recommended for local use and development:
 
 ```bash
 git clone https://github.com/Skill-Anything/Skill-Anything.git
@@ -85,9 +81,15 @@ cd Skill-Anything
 pip install -e ".[all,dev]"
 ```
 
+<details><summary><b>From PyPI</b></summary>
+
+```bash
+pip install skill-anything[all]
+```
+
 </details>
 
-<details><summary><b>Minimal install (choose only what you need)</b></summary>
+<details><summary><b>Minimal PyPI install (choose only what you need)</b></summary>
 
 ```bash
 pip install skill-anything            # core only (text source)
