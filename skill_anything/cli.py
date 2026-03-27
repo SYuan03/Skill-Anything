@@ -44,7 +44,7 @@ def _show_banner() -> None:
     console.print(_BANNER.format(version=__version__))
 
 
-def _show_result(pack: SkillPack, output_dir: Path) -> None:
+def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") -> None:
     console.print()
     summary_text = f"{pack.summary[:150]}..." if len(pack.summary) > 150 else pack.summary
     console.print(
@@ -84,10 +84,31 @@ def _show_result(pack: SkillPack, output_dir: Path) -> None:
 
     slug = slugify(pack.title)
     tree = Tree(f"[bold]{output_dir}[/bold]")
-    tree.add(f"[green]{slug}.yaml[/green]  <- data (use with quiz/review)")
-    tree.add(f"[green]{slug}.md[/green]    <- study guide (read directly)")
-    if (output_dir / f"{slug}-concept-map.png").exists():
-        tree.add(f"[green]{slug}-concept-map.png[/green]  <- visual concept map")
+
+    if format in ("study", "all"):
+        tree.add(f"[green]{slug}.yaml[/green]  <- data (use with quiz/review)")
+        tree.add(f"[green]{slug}.md[/green]    <- study guide (read directly)")
+        if (output_dir / f"{slug}-concept-map.png").exists():
+            tree.add(f"[green]{slug}-concept-map.png[/green]  <- visual concept map")
+
+    if format in ("skill", "all"):
+        skill_tree = tree.add(f"[cyan]{slug}/[/cyan]  <- SKILL.md directory (Claude Code / Cursor / Codex)")
+        skill_dir = output_dir / slug
+        if skill_dir.exists():
+            skill_tree.add("[green]SKILL.md[/green]")
+            if (skill_dir / "references").exists():
+                refs = skill_tree.add("[dim]references/[/dim]")
+                for f in sorted((skill_dir / "references").iterdir()):
+                    refs.add(f"[green]{f.name}[/green]")
+            if (skill_dir / "assets").exists():
+                assets = skill_tree.add("[dim]assets/[/dim]")
+                for f in sorted((skill_dir / "assets").iterdir()):
+                    assets.add(f"[green]{f.name}[/green]")
+            if (skill_dir / "scripts").exists():
+                scripts = skill_tree.add("[dim]scripts/[/dim]")
+                for f in sorted((skill_dir / "scripts").iterdir()):
+                    scripts.add(f"[green]{f.name}[/green]")
+
     console.print()
     console.print(tree)
 
@@ -106,13 +127,24 @@ def _show_result(pack: SkillPack, output_dir: Path) -> None:
             console.print(f"  [dim]... {len(pack.takeaways) - 3} more[/dim]")
 
     console.print()
-    console.print(Panel(
-        f"[bold]sa quiz[/bold] {output_dir / f'{slug}.yaml'}       [dim]# interactive quiz[/dim]\n"
-        f"[bold]sa review[/bold] {output_dir / f'{slug}.yaml'}     [dim]# flashcard review[/dim]\n"
-        f"[bold]sa info[/bold] {output_dir / f'{slug}.yaml'}       [dim]# view full details[/dim]",
-        title="Next Steps",
-        border_style="dim cyan",
-    ))
+
+    if format in ("study", "all"):
+        console.print(Panel(
+            f"[bold]sa quiz[/bold] {output_dir / f'{slug}.yaml'}       [dim]# interactive quiz[/dim]\n"
+            f"[bold]sa review[/bold] {output_dir / f'{slug}.yaml'}     [dim]# flashcard review[/dim]\n"
+            f"[bold]sa info[/bold] {output_dir / f'{slug}.yaml'}       [dim]# view full details[/dim]",
+            title="Next Steps",
+            border_style="dim cyan",
+        ))
+    elif format == "skill":
+        console.print(Panel(
+            f"[bold]Copy to your skills directory:[/bold]\n"
+            f"  cp -r {output_dir / slug} ~/.claude/skills/\n"
+            f"  cp -r {output_dir / slug} ~/.cursor/skills/\n"
+            f"  cp -r {output_dir / slug} .claude/skills/",
+            title="Use as Skill",
+            border_style="dim cyan",
+        ))
     console.print()
 
 
@@ -125,6 +157,7 @@ def pdf(
     path: str = typer.Argument(..., help="Path to PDF file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
 ) -> None:
     """[bold cyan]PDF -> Skill[/bold cyan] Extract knowledge from a PDF and generate a full learning pack."""
     _show_banner()
@@ -133,8 +166,8 @@ def pdf(
         progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
         engine = Engine()
         pack = engine.from_pdf(path, title=title)
-        engine.write(pack, output)
-    _show_result(pack, Path(output))
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 @app.command()
@@ -142,6 +175,7 @@ def video(
     source: str = typer.Argument(..., help="YouTube URL or path to video/subtitle file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
 ) -> None:
     """[bold cyan]Video -> Skill[/bold cyan] Extract knowledge from a video and generate a full learning pack."""
     _show_banner()
@@ -150,8 +184,8 @@ def video(
         progress.add_task("Transcript -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
         engine = Engine()
         pack = engine.from_video(source, title=title)
-        engine.write(pack, output)
-    _show_result(pack, Path(output))
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 @app.command()
@@ -159,6 +193,7 @@ def web(
     url: str = typer.Argument(..., help="Webpage URL"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
 ) -> None:
     """[bold cyan]Web -> Skill[/bold cyan] Extract knowledge from a webpage and generate a full learning pack."""
     _show_banner()
@@ -167,8 +202,8 @@ def web(
         progress.add_task("Scraping -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
         engine = Engine()
         pack = engine.from_web(url, title=title)
-        engine.write(pack, output)
-    _show_result(pack, Path(output))
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 @app.command()
@@ -176,6 +211,7 @@ def text(
     source: str = typer.Argument(..., help="Path to text/Markdown file, or inline text"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
 ) -> None:
     """[bold cyan]Text -> Skill[/bold cyan] Generate a full learning pack from text or Markdown."""
     _show_banner()
@@ -184,8 +220,8 @@ def text(
         progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
         engine = Engine()
         pack = engine.from_text(source, title=title)
-        engine.write(pack, output)
-    _show_result(pack, Path(output))
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 @app.command()
@@ -193,6 +229,7 @@ def auto(
     source: str = typer.Argument(..., help="Any source: PDF path, YouTube URL, webpage URL, or text file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
 ) -> None:
     """[bold green]Auto -> Skill[/bold green] Auto-detect source type and generate a full learning pack."""
     _show_banner()
@@ -201,8 +238,8 @@ def auto(
         progress.add_task("Detecting -> Extracting -> Generating skill pack...", total=None)
         engine = Engine()
         pack = engine.from_source(source, title=title)
-        engine.write(pack, output)
-    _show_result(pack, Path(output))
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 # ======================================================================
@@ -232,6 +269,38 @@ def review(
     from skill_anything.interactive.review_runner import ReviewRunner
     pack = Engine.load(path)
     ReviewRunner(pack).run(count=count, shuffle=not no_shuffle)
+
+
+# ======================================================================
+# Export
+# ======================================================================
+
+@app.command()
+def export(
+    path: str = typer.Argument(..., help="Path to skill pack YAML file"),
+    format: str = typer.Option("skill", "--format", "-f", help="Export format: study, skill, or all"),
+    output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+) -> None:
+    """[bold yellow]Export[/bold yellow] Convert an existing YAML skill pack to a different format.
+
+    Export as SKILL.md directory (Claude Code / Cursor / Codex compatible):
+      sa export output/my-skill.yaml --format skill
+
+    Export as study guide (Markdown):
+      sa export output/my-skill.yaml --format study
+
+    Export both formats:
+      sa export output/my-skill.yaml --format all
+    """
+    _show_banner()
+    console.print(f"[bold]Loading:[/bold] [cyan]{path}[/cyan]")
+    console.print(f"[bold]Format:[/bold] [cyan]{format}[/cyan]\n")
+    pack = Engine.load(path)
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        progress.add_task(f"Exporting as {format}...", total=None)
+        engine = Engine()
+        engine.write(pack, output, format=format)
+    _show_result(pack, Path(output), format=format)
 
 
 # ======================================================================

@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from skill_anything.exporters.skill_exporter import SkillExporter
 from skill_anything.generators.flashcard_gen import FlashcardGenerator
 from skill_anything.generators.knowledge_gen import KnowledgeGenerator
 from skill_anything.generators.practice_gen import PracticeGenerator
@@ -38,6 +39,7 @@ class Engine:
         self.flashcard_gen = FlashcardGenerator()
         self.practice_gen = PracticeGenerator()
         self.visual_gen = VisualGenerator()
+        self.skill_exporter = SkillExporter()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -87,34 +89,68 @@ class Engine:
     # Output
     # ------------------------------------------------------------------
 
-    def write(self, pack: SkillPack, output_dir: str | Path) -> Path:
-        """Write SkillPack to disk: YAML + Markdown study guide + concept map image."""
+    def write(self, pack: SkillPack, output_dir: str | Path, *, format: str = "study") -> Path:
+        """Write SkillPack to disk.
+
+        Args:
+            format: "study" (YAML + Markdown + PNG), "skill" (SKILL.md directory),
+                    or "all" (both formats).
+        """
         import yaml
 
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         slug = slugify(pack.title)
 
-        # YAML data
-        yaml_path = out / f"{slug}.yaml"
-        with open(yaml_path, "w", encoding="utf-8") as f:
-            yaml.dump(pack.to_dict(), f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-
-        # Concept map image
+        # Always generate concept map (used by both formats)
         image_filename = f"{slug}-concept-map.png"
         image_path = out / image_filename
+        image_result = None
+        if format in ("study", "all"):
+            image_result = self.visual_gen.generate(
+                pack.title, pack.key_concepts, pack.chunks, output_path=str(image_path),
+            )
+
+        if format in ("study", "all"):
+            # YAML data
+            yaml_path = out / f"{slug}.yaml"
+            with open(yaml_path, "w", encoding="utf-8") as f:
+                yaml.dump(pack.to_dict(), f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+            # Markdown study guide
+            md_path = out / f"{slug}.md"
+            md_path.write_text(
+                self._render_study_guide(pack, concept_map=image_filename if image_result else None),
+                encoding="utf-8",
+            )
+
+        if format in ("skill", "all"):
+            # Generate concept map for skill format if not already done
+            if format == "skill":
+                image_result = self.visual_gen.generate(
+                    pack.title, pack.key_concepts, pack.chunks, output_path=str(image_path),
+                )
+            concept_map_src = image_path if image_result else None
+            self.skill_exporter.export(pack, out, concept_map_src=concept_map_src)
+
+        return out
+
+    def write_skill(self, pack: SkillPack, output_dir: str | Path) -> Path:
+        """Write SkillPack as a SKILL.md directory (Claude Code / Cursor / Codex compatible)."""
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        slug = slugify(pack.title)
+
+        # Generate concept map
+        image_path = out / f"{slug}-concept-map.png"
         image_result = self.visual_gen.generate(
             pack.title, pack.key_concepts, pack.chunks, output_path=str(image_path),
         )
 
-        # Markdown study guide
-        md_path = out / f"{slug}.md"
-        md_path.write_text(
-            self._render_study_guide(pack, concept_map=image_filename if image_result else None),
-            encoding="utf-8",
+        return self.skill_exporter.export(
+            pack, out,
+            concept_map_src=image_path if image_result else None,
         )
-
-        return out
 
     @staticmethod
     def load(path: str) -> SkillPack:

@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Skill-Anything | Any Source → Interactive Skills</title>
-<meta name="description" content="Convert PDF, Video, Web, Text into quizzes, flashcards, structured study notes, practice exercises, and concept maps."/>
+<meta name="description" content="Convert PDF, Video, Web, Text into quizzes, flashcards, structured study notes, practice exercises, and concept maps. Export as SKILL.md for Claude Code, Cursor, and Codex."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -140,7 +140,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── CODE BLOCK ── */
 .hero-code {
-  max-width: 520px; margin: 48px auto 0;
+  max-width: 560px; margin: 48px auto 0;
   background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
   padding: 20px 28px; text-align: left;
   font-family: var(--mono); font-size: 14px; color: var(--ink2);
@@ -233,6 +233,12 @@ a { color: inherit; text-decoration: none; }
 .demo-body img {
   max-width: 100%; border-radius: 8px;
 }
+.demo-fallback {
+  display: none;
+  padding: 40px 20px;
+  color: var(--ink2);
+  font-size: 14px;
+}
 .demo-link {
   display: inline-flex; align-items: center; gap: 6px;
   margin-top: 16px; font-size: 14px; font-weight: 600;
@@ -261,7 +267,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── QUICK START ── */
 .steps {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px;
 }
 .step {
@@ -282,6 +288,37 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--mono); font-size: 13px; color: var(--teal);
   overflow-x: auto;
 }
+
+/* ── OUTPUT PREVIEW ── */
+.preview-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+}
+.preview-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden; transition: all .25s;
+}
+.preview-card:hover { border-color: var(--teal); transform: translateY(-2px); }
+.preview-card-header {
+  padding: 16px 20px; background: var(--bg3); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.preview-card-header .badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 4px;
+}
+.badge-study { color: var(--purple); background: var(--purple-dim); }
+.badge-skill { color: var(--teal); background: var(--teal-dim); }
+.preview-card-header h4 {
+  font-size: 14px; font-weight: 600;
+}
+.preview-card-body {
+  padding: 20px; font-family: var(--mono); font-size: 12px; line-height: 1.8;
+  color: var(--ink2); max-height: 360px; overflow-y: auto;
+}
+.preview-card-body .kw { color: var(--teal); }
+.preview-card-body .str { color: var(--amber); }
+.preview-card-body .cmt { color: var(--ink3); }
+.preview-card-body .fn { color: var(--purple); }
 
 /* ── FOOTER ── */
 .footer {
@@ -322,6 +359,7 @@ a { color: inherit; text-decoration: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .pipeline { flex-direction: column; }
   .pipe-arrow { transform: rotate(90deg); }
+  .preview-grid { grid-template-columns: 1fr; }
   .footer { flex-direction: column; text-align: center; }
 }
 </style>
@@ -336,6 +374,7 @@ a { color: inherit; text-decoration: none; }
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#output">Output</a>
       <a href="#demo">Demo</a>
       <a href="#quickstart">Quick Start</a>
     </div>
@@ -352,7 +391,7 @@ a { color: inherit; text-decoration: none; }
   <h1 class="anim anim-d1"><span class="grad">Skill-Anything</span></h1>
   <p class="hero-sub anim anim-d2">
     Any Source &rarr; Interactive Skills.<br/>
-    Convert PDF, Video, Web, and Text into quizzes, flashcards, structured study notes, practice exercises, and concept maps.
+    Convert PDF, Video, Web, and Text into quizzes, flashcards, study notes, and SKILL.md for Claude Code, Cursor &amp; Codex.
   </p>
   <div class="hero-actions anim anim-d3">
     <a href="https://github.com/SYuan03/Skill-Anything#quick-start" class="btn-primary" target="_blank" rel="noopener">
@@ -364,7 +403,7 @@ a { color: inherit; text-decoration: none; }
   </div>
   <div class="hero-code anim anim-d4">
     <div><span class="prompt">$</span> <span class="cmd">pip install skill-anything[all]</span></div>
-    <div><span class="prompt">$</span> <span class="cmd">sa auto paper.pdf</span> <span class="comment">&nbsp;# generates quiz + flashcards + notes</span></div>
+    <div><span class="prompt">$</span> <span class="cmd">sa auto paper.pdf --format skill</span> <span class="comment">&nbsp;# export as SKILL.md</span></div>
     <div><span class="prompt">$</span> <span class="cmd">sa quiz output/paper.yaml</span> <span class="comment">&nbsp;# interactive quiz</span></div>
   </div>
 </section>
@@ -373,7 +412,7 @@ a { color: inherit; text-decoration: none; }
 <section class="section" id="features">
   <div class="section-label anim">How It Works</div>
   <div class="section-title anim anim-d1">Any Source In, Skills Out</div>
-  <div class="section-desc anim anim-d2">One command transforms any learning material into a complete, interactive study package.</div>
+  <div class="section-desc anim anim-d2">One command transforms any learning material into a complete, interactive study package or AI-agent-ready skill.</div>
 
   <div class="pipeline anim anim-d3">
     <div class="pipe-group">
@@ -396,12 +435,12 @@ a { color: inherit; text-decoration: none; }
     <div class="pipe-group">
       <div class="pipe-group-label">Outputs</div>
       <div class="pipe-tags">
+        <span class="pipe-tag out">SKILL.md</span>
         <span class="pipe-tag out">Quiz</span>
         <span class="pipe-tag out">Flashcards</span>
         <span class="pipe-tag out">Notes</span>
         <span class="pipe-tag out">Exercises</span>
         <span class="pipe-tag out">Concept Map</span>
-        <span class="pipe-tag out">Cheat Sheet</span>
       </div>
     </div>
   </div>
@@ -421,8 +460,8 @@ a { color: inherit; text-decoration: none; }
       <div class="stat-label">Source Formats</div>
     </div>
     <div class="stat">
-      <div class="stat-val green">80%+</div>
-      <div class="stat-label">Active Recall Retention</div>
+      <div class="stat-val green">3</div>
+      <div class="stat-label">AI Tool Integrations</div>
     </div>
   </div>
 
@@ -454,9 +493,64 @@ a { color: inherit; text-decoration: none; }
       <p>Works with OpenAI, DeepSeek, Qwen, Ollama, or any OpenAI-compatible API. Falls back to rule-based generation.</p>
     </div>
     <div class="feat">
-      <div class="feat-icon blue">&#x1F4E6;</div>
-      <h3>Structured YAML Output</h3>
-      <p>Machine-readable YAML output consumable by CLI tools, AI agents, or your own pipelines.</p>
+      <div class="feat-icon blue">&#x1F517;</div>
+      <h3>Claude Code / Cursor / Codex</h3>
+      <p>Export as standard SKILL.md directory &mdash; drop into Claude Code, Cursor, or Codex and use your knowledge as an AI skill.</p>
+    </div>
+  </div>
+</section>
+
+<!-- OUTPUT PREVIEW -->
+<section class="section" id="output">
+  <div class="section-label">Output Formats</div>
+  <div class="section-title">Two Formats, One Command</div>
+  <div class="section-desc">Generate a study guide for yourself, or a SKILL.md for your AI tools. Or both.</div>
+
+  <div class="preview-grid">
+    <!-- Study Guide Format -->
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span class="badge badge-study">Study Guide</span>
+        <h4>sa auto paper.pdf</h4>
+      </div>
+      <div class="preview-card-body">
+        <span class="cmt"># 3 files generated:</span><br/>
+        output/<br/>
+        &nbsp;&nbsp;<span class="fn">paper.yaml</span>&nbsp;&nbsp;&nbsp;<span class="cmt"># structured data</span><br/>
+        &nbsp;&nbsp;<span class="fn">paper.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># 12-section study guide</span><br/>
+        &nbsp;&nbsp;<span class="fn">paper-concept-map.png</span><br/>
+        <br/>
+        <span class="cmt"># Interactive commands:</span><br/>
+        <span class="kw">$</span> sa quiz output/paper.yaml<br/>
+        <span class="kw">$</span> sa review output/paper.yaml<br/>
+        <span class="kw">$</span> sa info output/paper.yaml
+      </div>
+    </div>
+
+    <!-- SKILL.md Format -->
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span class="badge badge-skill">SKILL.md</span>
+        <h4>sa auto paper.pdf --format skill</h4>
+      </div>
+      <div class="preview-card-body">
+        <span class="cmt"># Standard skill directory:</span><br/>
+        output/paper/<br/>
+        &nbsp;&nbsp;<span class="fn">SKILL.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># frontmatter + core knowledge</span><br/>
+        &nbsp;&nbsp;<span class="fn">references/</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;detailed-notes.md<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;glossary.md<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;learning-path.md<br/>
+        &nbsp;&nbsp;<span class="fn">assets/</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;quiz.yaml&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># 20-40 questions</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;flashcards.yaml&nbsp;<span class="cmt"># 25-50 cards</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;exercises.yaml<br/>
+        &nbsp;&nbsp;<span class="fn">scripts/</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;quiz.py&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># standalone runner</span><br/>
+        <br/>
+        <span class="cmt"># Use in Claude Code / Cursor / Codex:</span><br/>
+        <span class="kw">$</span> cp -r output/paper/ ~/.claude/skills/
+      </div>
     </div>
   </div>
 </section>
@@ -475,7 +569,12 @@ a { color: inherit; text-decoration: none; }
       <div class="demo-title-bar">skill-anything &mdash; demo</div>
     </div>
     <div class="demo-body">
-      <img src="assets/demo.gif" alt="Skill-Anything Demo"/>
+      <img id="demo-gif" src="assets/demo.gif" alt="Skill-Anything Demo"
+           onerror="this.style.display='none';document.getElementById('demo-fallback').style.display='block'"/>
+      <div id="demo-fallback" class="demo-fallback">
+        <p style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--ink);">Interactive Demo Available</p>
+        <p>Click below to open the full interactive demo with pipeline animation, quiz mode, and output explorer.</p>
+      </div>
       <br/>
       <a href="assets/demo.html" class="demo-link">
         Open Interactive Demo &rarr;
@@ -487,8 +586,8 @@ a { color: inherit; text-decoration: none; }
 <!-- QUICK START -->
 <section class="section" id="quickstart">
   <div class="section-label">Quick Start</div>
-  <div class="section-title">Up and Running in 3 Steps</div>
-  <div class="section-desc">From install to your first interactive quiz in under a minute.</div>
+  <div class="section-title">Up and Running in 4 Steps</div>
+  <div class="section-desc">From install to your first AI skill in under a minute.</div>
 
   <div class="steps">
     <div class="step">
@@ -508,6 +607,12 @@ a { color: inherit; text-decoration: none; }
       <h3>Learn</h3>
       <p style="color:var(--ink2);font-size:14px;">Take an interactive quiz, review flashcards, or browse the study guide.</p>
       <code>sa quiz output/paper.yaml</code>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Export as Skill</h3>
+      <p style="color:var(--ink2);font-size:14px;">Export as SKILL.md for Claude Code, Cursor, or Codex.</p>
+      <code>sa export output/paper.yaml -f skill</code>
     </div>
   </div>
 </section>

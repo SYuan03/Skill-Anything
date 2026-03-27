@@ -13,6 +13,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#demo">Demo</a> •
   <a href="#output-structure">Output</a> •
+  <a href="#skill-export">Skill Export</a> •
   <a href="#environment-variables">Config</a> •
   <a href="#cli-reference">CLI</a> •
   <a href="#python-api">API</a> •
@@ -139,7 +140,9 @@ sa info output/my-skill.yaml       # View full skill pack details
 
 ## Output Structure
 
-Every source generates **3 output files**:
+Every source generates **3 output files** by default (study format), or a **SKILL.md directory** (skill format):
+
+### Study Format (default)
 
 ```
 output/
@@ -147,6 +150,18 @@ output/
 ├── my-skill.md                # Complete study guide (12 sections, read directly)
 └── my-skill-concept-map.png   # AI-generated visual concept map
 ```
+
+### Skill Format (`--format skill`)
+
+```
+output/my-skill/
+├── SKILL.md                   # Claude Code / Cursor / Codex compatible
+├── references/                # Detailed notes, glossary, learning path
+├── assets/                    # Quiz, flashcards, exercises (YAML), concept map
+└── scripts/                   # Standalone quiz runner
+```
+
+> Use `--format all` to generate both formats at once.
 
 ### The 12-Section Study Guide
 
@@ -211,6 +226,60 @@ learning_path:
   next_steps: [...]
   resources: [...]
 ```
+
+---
+
+## Skill Export
+
+Skill-Anything can export directly as a **SKILL.md directory** — the universal skill format used by **Claude Code**, **Cursor**, and **Codex**.
+
+### Generate as Skill
+
+```bash
+# Generate from any source directly as a skill
+sa auto paper.pdf --format skill
+sa pdf textbook.pdf --format skill
+sa web https://example.com/article --format skill
+
+# Or export an existing YAML pack
+sa export output/my-skill.yaml --format skill
+
+# Generate both study guide + skill
+sa auto paper.pdf --format all
+```
+
+### Skill Directory Structure
+
+```
+output/my-skill/
+├── SKILL.md              # Frontmatter + core knowledge (key concepts, cheat sheet, takeaways)
+├── references/
+│   ├── detailed-notes.md # Comprehensive structured notes
+│   ├── glossary.md       # Domain terms and definitions
+│   └── learning-path.md  # Prerequisites, next steps, resources
+├── assets/
+│   ├── quiz.yaml         # 20-40 quiz questions (6 types, 3 difficulty levels)
+│   ├── flashcards.yaml   # 25-50 spaced-repetition cards
+│   ├── exercises.yaml    # Hands-on practice exercises
+│   └── concept-map.png   # AI-generated visual concept map
+└── scripts/
+    └── quiz.py           # Standalone CLI quiz runner
+```
+
+### Use as AI Skill
+
+```bash
+# Claude Code
+cp -r output/my-skill/ ~/.claude/skills/
+
+# Cursor
+cp -r output/my-skill/ ~/.cursor/skills/
+
+# Project-level (any tool)
+cp -r output/my-skill/ .claude/skills/
+```
+
+The generated `SKILL.md` follows the standard format with YAML frontmatter (`name`, `description`, `version`) and uses progressive disclosure — core knowledge in SKILL.md, detailed references loaded on demand.
 
 ---
 
@@ -318,6 +387,12 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `sa review <yaml>` | Flashcard review (multi-round repetition) | `sa review x.yaml -n 20` |
 | `sa info <yaml>` | View skill pack details | `sa info x.yaml --json` |
 
+### Export Command
+
+| Command | Description | Example |
+|:--------|:------------|:--------|
+| `sa export <yaml>` | Export existing YAML to a different format | `sa export x.yaml -f skill -o ./skills/` |
+
 ### Utility
 
 | Command | Description |
@@ -328,8 +403,9 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 
 | Option | Short | Applies To | Description |
 |:-------|:------|:-----------|:------------|
+| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `auto`, `export` | Output format: `study` (default), `skill` (SKILL.md), `all` |
 | `--title` | `-t` | `pdf`, `video`, `web`, `text`, `auto` | Custom title for the skill pack |
-| `--output` | `-o` | `pdf`, `video`, `web`, `text`, `auto` | Output directory (default: `./output`) |
+| `--output` | `-o` | `pdf`, `video`, `web`, `text`, `auto`, `export` | Output directory (default: `./output`) |
 | `--count` | `-n` | `quiz`, `review` | Number of questions / flashcards |
 | `--difficulty` | `-d` | `quiz` | Filter by difficulty: `easy`, `medium`, `hard` |
 | `--no-shuffle` | — | `quiz`, `review` | Keep original order instead of randomizing |
@@ -430,6 +506,9 @@ Skill-Anything/
 │   │   ├── flashcard_gen.py    # Spaced-repetition flashcards
 │   │   ├── practice_gen.py     # Hands-on exercises
 │   │   └── visual_gen.py       # AI-generated concept map images
+│   ├── exporters/
+│   │   ├── __init__.py         # Exporter registry
+│   │   └── skill_exporter.py   # SKILL.md export (Claude Code / Cursor / Codex)
 │   └── interactive/
 │       ├── quiz_runner.py      # CLI interactive quiz with grading
 │       └── review_runner.py    # CLI flashcard review with multi-round repetition
@@ -457,6 +536,7 @@ Skill-Anything/
 | **Content Repurposing** | Turn long-form content into flashcards, cheat sheets, and exercises | Any |
 | **Teaching** | Create assessment materials from lesson plans or lecture notes | Text, PDF |
 | **Agent Knowledge** | Produce structured YAML for AI agents to query and reason over | Any |
+| **AI Skill Creation** | Export as SKILL.md for Claude Code, Cursor, or Codex | Any |
 
 ---
 
