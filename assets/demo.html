@@ -467,6 +467,7 @@ body {
           <button class="tab-btn" onclick="showTab('glossary')">Glossary</button>
           <button class="tab-btn" onclick="showTab('cards')">Flashcards</button>
           <button class="tab-btn" onclick="showTab('exercises')">Exercises</button>
+          <button class="tab-btn" onclick="showTab('skillmd')">SKILL.md Export</button>
         </div>
 
         <!-- Study Guide -->
@@ -621,6 +622,47 @@ body {
             <div class="ex-desc">The Transformer's self-attention has O(n²) complexity. Analyze three proposed solutions (Linformer, Performer, Flash Attention) and compare their trade-offs in accuracy, speed, and memory usage.</div>
           </div>
           <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">+ 2 more exercises in the full skill pack...</div>
+        </div>
+
+        <!-- SKILL.md Export -->
+        <div id="tab-skillmd" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            SKILL.md Export &mdash; Claude Code / Cursor / Codex Compatible
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--text2);">
+            <div style="color:var(--text3);margin-bottom:8px;"># sa export output/transformer.yaml --format skill</div>
+            <div style="margin-bottom:12px;">
+              <span style="color:var(--accent2);">output/transformer-architecture/</span><br/>
+              &nbsp;&nbsp;<span style="color:var(--accent1);font-weight:600;">SKILL.md</span><br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">references/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;detailed-notes.md<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;glossary.md<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;learning-path.md<br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">assets/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;quiz.yaml &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text3);"># 20 questions</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;flashcards.yaml <span style="color:var(--text3);"># 25 cards</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;exercises.yaml<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;concept-map.png<br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">scripts/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;quiz.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text3);"># standalone runner</span>
+            </div>
+          </div>
+          <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--text2);">
+            <div style="color:var(--accent1);font-weight:600;margin-bottom:4px;">SKILL.md Preview:</div>
+            <div style="color:var(--text3);">---</div>
+            <div><span style="color:var(--accent2);">name:</span> transformer-architecture</div>
+            <div><span style="color:var(--accent2);">description:</span> >-</div>
+            <div>&nbsp;&nbsp;This skill should be used when the user asks about</div>
+            <div>&nbsp;&nbsp;"self-attention", "multi-head attention", "transformer"...</div>
+            <div><span style="color:var(--accent2);">version:</span> 1.0.0</div>
+            <div style="color:var(--text3);">---</div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);font-weight:600;"># Transformer Architecture</span></div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);">## Overview</span></div>
+            <div style="color:var(--text3);font-style:italic;">The Transformer replaces recurrence with self-attention...</div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);">## Key Concepts</span></div>
+            <div>1. Self-Attention &nbsp;2. Multi-Head Attention &nbsp;3. QKV...</div>
+          </div>
+          <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">Copy to ~/.claude/skills/ or ~/.cursor/skills/ to use as an AI skill.</div>
         </div>
 
       </div>

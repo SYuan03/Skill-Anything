@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -42,6 +43,14 @@ _BANNER = r"""[bold cyan]
 
 def _show_banner() -> None:
     console.print(_BANNER.format(version=__version__))
+
+
+def _handle_error(e: Exception) -> None:
+    """Print a user-friendly error message and exit."""
+    error_type = type(e).__name__
+    console.print(f"\n[bold red]Error:[/bold red] {error_type}: {e}")
+    console.print("[dim]Run with PYTHONUNBUFFERED=1 for full traceback.[/dim]")
+    raise typer.Exit(1)
 
 
 def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") -> None:
@@ -162,12 +171,17 @@ def pdf(
     """[bold cyan]PDF -> Skill[/bold cyan] Extract knowledge from a PDF and generate a full learning pack."""
     _show_banner()
     console.print(f"[bold]Parsing PDF:[/bold] [cyan]{path}[/cyan]\n")
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-        engine = Engine()
-        pack = engine.from_pdf(path, title=title)
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_pdf(path, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 @app.command()
@@ -180,12 +194,17 @@ def video(
     """[bold cyan]Video -> Skill[/bold cyan] Extract knowledge from a video and generate a full learning pack."""
     _show_banner()
     console.print(f"[bold]Parsing video:[/bold] [cyan]{source}[/cyan]\n")
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task("Transcript -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-        engine = Engine()
-        pack = engine.from_video(source, title=title)
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Transcript -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_video(source, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 @app.command()
@@ -198,12 +217,17 @@ def web(
     """[bold cyan]Web -> Skill[/bold cyan] Extract knowledge from a webpage and generate a full learning pack."""
     _show_banner()
     console.print(f"[bold]Fetching:[/bold] [cyan]{url}[/cyan]\n")
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task("Scraping -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-        engine = Engine()
-        pack = engine.from_web(url, title=title)
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Scraping -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_web(url, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 @app.command()
@@ -216,12 +240,17 @@ def text(
     """[bold cyan]Text -> Skill[/bold cyan] Generate a full learning pack from text or Markdown."""
     _show_banner()
     console.print(f"[bold]Parsing text:[/bold] [cyan]{source[:80]}[/cyan]\n")
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-        engine = Engine()
-        pack = engine.from_text(source, title=title)
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_text(source, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 @app.command()
@@ -234,12 +263,17 @@ def auto(
     """[bold green]Auto -> Skill[/bold green] Auto-detect source type and generate a full learning pack."""
     _show_banner()
     console.print(f"[bold]Auto-detecting:[/bold] [cyan]{source[:80]}[/cyan]\n")
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task("Detecting -> Extracting -> Generating skill pack...", total=None)
-        engine = Engine()
-        pack = engine.from_source(source, title=title)
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Detecting -> Extracting -> Generating skill pack...", total=None)
+            engine = Engine()
+            pack = engine.from_source(source, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 # ======================================================================

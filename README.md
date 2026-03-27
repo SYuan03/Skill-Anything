@@ -466,7 +466,7 @@ All configuration is done through environment variables (set in `.env` or your s
 |:---------|:------------|:--------|
 | `SKILL_ANYTHING_API_KEY` | LLM API key. Falls back to `OPENAI_API_KEY` | — |
 | `SKILL_ANYTHING_API_BASE` | Chat completions base URL. Falls back to `OPENAI_API_BASE` | — |
-| `SKILL_ANYTHING_MODEL` | Chat model name | `gpt-5.4` |
+| `SKILL_ANYTHING_MODEL` | Chat model name | `gpt-4o` |
 | `SKILL_ANYTHING_IMAGE_API_BASE` | Image generation base URL. Falls back to `SKILL_ANYTHING_API_BASE` | — |
 | `SKILL_ANYTHING_IMAGE_MODEL` | Image model name | `dall-e-3` |
 | `SKILL_ANYTHING_PROXY` | HTTP proxy for API requests. Falls back to `HTTPS_PROXY` / `HTTP_PROXY` | — |

@@ -37,7 +37,7 @@ def _get_client() -> tuple[Any, str]:
     api_key = os.getenv("SKILL_ANYTHING_API_KEY") or os.getenv("OPENAI_API_KEY", "")
     api_base = os.getenv("SKILL_ANYTHING_API_BASE") or os.getenv("OPENAI_API_BASE")
     proxy = os.getenv("SKILL_ANYTHING_PROXY") or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
-    model = os.getenv("SKILL_ANYTHING_MODEL", "gpt-5.4")
+    model = os.getenv("SKILL_ANYTHING_MODEL", "gpt-4o")
 
     if not api_key:
         return None, model
