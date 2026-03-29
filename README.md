@@ -48,7 +48,7 @@ AI agents are getting smarter, but **humans still learn the same broken way** �
 ## Demo
 
 <p align="center">
-  <img src="assets/demo.gif" alt="Skill-Anything Demo — Generation Pipeline & Interactive Quiz" width="960"/>
+  <img src="assets/demo.svg" alt="Skill-Anything Demo — Generation Pipeline & Interactive Quiz" width="960"/>
 </p>
 
 <p align="center">
