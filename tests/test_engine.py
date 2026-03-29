@@ -55,6 +55,10 @@ def test_engine_detect_source_type():
     assert Engine._detect_source_type("notes.md") == SourceType.TEXT
     assert Engine._detect_source_type("video.mp4") == SourceType.VIDEO
     assert Engine._detect_source_type("video.srt") == SourceType.VIDEO
+    assert Engine._detect_source_type("lecture.mp3") == SourceType.AUDIO
+    assert Engine._detect_source_type("podcast.wav") == SourceType.AUDIO
+    assert Engine._detect_source_type("recording.m4a") == SourceType.AUDIO
+    assert Engine._detect_source_type("music.flac") == SourceType.AUDIO
 
 
 def test_engine_render_study_guide(sample_pack: SkillPack):
@@ -72,3 +76,22 @@ def test_engine_render_study_guide(sample_pack: SkillPack):
     assert "## Outline" in md
     assert "Table of Contents" in md
     assert "Skill-Anything" in md
+
+
+def test_engine_load_and_info(sample_pack: SkillPack):
+    """Verify Engine.load can round-trip a SkillPack (used by sa info)."""
+    import tempfile
+    import yaml
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(sample_pack.to_dict(), f, allow_unicode=True)
+        f.flush()
+        loaded = Engine.load(f.name)
+
+    assert loaded.title == "Machine Learning Basics"
+    assert loaded.source_type == SourceType.TEXT
+    assert loaded.stats["quiz_questions"] == 2
+    assert loaded.stats["flashcards"] == 2
+    assert loaded.stats["exercises"] == 1
+    assert len(loaded.glossary) == 2
+    assert loaded.glossary[0].term == "CNN"

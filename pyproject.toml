@@ -54,6 +54,9 @@ pdf = [
 video = [
     "youtube-transcript-api>=1.0.0",
 ]
+audio = [
+    "openai-whisper>=20231117",
+]
 web = [
     "beautifulsoup4>=4.12.0",
 ]
@@ -61,6 +64,7 @@ all = [
     "pdfplumber>=0.10.0",
     "youtube-transcript-api>=1.0.0",
     "beautifulsoup4>=4.12.0",
+    "openai-whisper>=20231117",
 ]
 dev = [
     "pytest>=8.0.0",
@@ -72,9 +76,9 @@ skill-anything = "skill_anything.cli:app"
 sa = "skill_anything.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/Skill-Anything/Skill-Anything"
-Repository = "https://github.com/Skill-Anything/Skill-Anything"
-Issues = "https://github.com/Skill-Anything/Skill-Anything/issues"
+Homepage = "https://github.com/SYuan03/Skill-Anything"
+Repository = "https://github.com/SYuan03/Skill-Anything"
+Issues = "https://github.com/SYuan03/Skill-Anything/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["skill_anything"]

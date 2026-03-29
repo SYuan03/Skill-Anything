@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Skill-Anything — Any Source → Interactive Skills" width="960"/>
+  <img src="assets/banner.svg" alt="Skill-Anything — Any Source → Interactive Skills" width="960"/>
 </p>
 
 <p align="center">
@@ -7,6 +7,12 @@
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10+-3b82f6?style=for-the-badge" alt="Python"/></a>
   <a href="#output-structure"><img src="https://img.shields.io/badge/outputs-12_sections-f59e0b?style=for-the-badge" alt="12 Output Sections"/></a>
   <a href="#quiz-types"><img src="https://img.shields.io/badge/quiz-6_types-a855f7?style=for-the-badge" alt="6 Quiz Types"/></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/SYuan03/Skill-Anything/stargazers"><img src="https://img.shields.io/github/stars/SYuan03/Skill-Anything?style=for-the-badge&color=f59e0b" alt="Stars"/></a>
+  <a href="https://github.com/SYuan03/Skill-Anything/commits"><img src="https://img.shields.io/github/last-commit/SYuan03/Skill-Anything?style=for-the-badge&color=6366f1" alt="Last Commit"/></a>
+  <a href="https://pypi.org/project/skill-anything/"><img src="https://img.shields.io/pypi/v/skill-anything?style=for-the-badge&color=22c55e" alt="PyPI"/></a>
 </p>
 
 <p align="center">
@@ -60,7 +66,7 @@ The demo showcases:
 <details><summary><b>Run the interactive demo locally</b></summary>
 
 ```bash
-git clone https://github.com/Skill-Anything/Skill-Anything.git
+git clone https://github.com/SYuan03/Skill-Anything.git
 open Skill-Anything/assets/demo.html      # macOS
 xdg-open Skill-Anything/assets/demo.html  # Linux
 ```
@@ -76,7 +82,7 @@ xdg-open Skill-Anything/assets/demo.html  # Linux
 Recommended for local use and development:
 
 ```bash
-git clone https://github.com/Skill-Anything/Skill-Anything.git
+git clone https://github.com/SYuan03/Skill-Anything.git
 cd Skill-Anything
 pip install -e ".[all,dev]"
 ```
@@ -96,6 +102,7 @@ pip install skill-anything            # core only (text source)
 pip install skill-anything[pdf]       # + PDF support (pdfplumber)
 pip install skill-anything[video]     # + video support (youtube-transcript-api)
 pip install skill-anything[web]       # + web support (beautifulsoup4)
+pip install skill-anything[audio]     # + audio support (openai-whisper)
 pip install skill-anything[all]       # everything
 ```
 
@@ -127,6 +134,7 @@ sa pdf textbook.pdf                                    # PDF → Skill
 sa video https://www.youtube.com/watch?v=dQw4w9WgXcQ   # Video → Skill
 sa web https://example.com/article                     # Webpage → Skill
 sa text notes.md                                       # Text → Skill
+sa audio lecture.mp3                                   # Audio → Skill
 sa auto anything                                       # Auto-detect source type
 ```
 
@@ -348,6 +356,15 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 - Page title auto-detected for the skill pack
 - Install: `pip install skill-anything[web]`
 
+### Audio
+
+- Transcribes audio files using **local Whisper** or **OpenAI Whisper API**
+- Supported formats: `.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`, `.ogg`, `.wma`
+- Local Whisper is tried first (free, offline); falls back to Whisper API if not installed
+- Timestamps preserved in the generated outline
+- Install: `pip install skill-anything[audio]` (for local Whisper)
+- Or just set `SKILL_ANYTHING_API_KEY` to use the Whisper API without installing the model
+
 ### Text / Markdown
 
 - Reads any UTF-8 text file (`.txt`, `.md`, etc.)
@@ -365,6 +382,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | YouTube URL (`youtube.com`, `youtu.be`) | Video |
 | `http://` / `https://` | Webpage |
 | `*.mp4`, `*.mkv`, `*.srt`, `*.vtt`, etc. | Video |
+| `*.mp3`, `*.wav`, `*.m4a`, `*.aac`, `*.flac`, `*.ogg`, `*.wma` | Audio |
 | Everything else | Text |
 
 ---
@@ -379,6 +397,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `sa video <src>` | YouTube URL / subtitle file → skill pack | `sa video https://youtu.be/xxx` |
 | `sa web <url>` | Webpage → skill pack | `sa web https://example.com/post` |
 | `sa text <src>` | Text / Markdown → skill pack | `sa text notes.md` |
+| `sa audio <file>` | Audio → skill pack (transcribe + generate) | `sa audio lecture.mp3` |
 | `sa auto <src>` | Auto-detect source type → skill pack | `sa auto paper.pdf` |
 
 ### Interactive Commands
@@ -405,7 +424,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 
 | Option | Short | Applies To | Description |
 |:-------|:------|:-----------|:------------|
-| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `auto`, `export` | Output format: `study` (default), `skill` (SKILL.md), `all` |
+| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `audio`, `auto`, `export` | Output format: `study` (default), `skill` (SKILL.md), `all` |
 | `--title` | `-t` | `pdf`, `video`, `web`, `text`, `auto` | Custom title for the skill pack |
 | `--output` | `-o` | `pdf`, `video`, `web`, `text`, `auto`, `export` | Output directory (default: `./output`) |
 | `--count` | `-n` | `quiz`, `review` | Number of questions / flashcards |
@@ -472,6 +491,7 @@ All configuration is done through environment variables (set in `.env` or your s
 | `SKILL_ANYTHING_IMAGE_API_BASE` | Image generation base URL. Falls back to `SKILL_ANYTHING_API_BASE` | — |
 | `SKILL_ANYTHING_IMAGE_MODEL` | Image model name | `dall-e-3` |
 | `SKILL_ANYTHING_PROXY` | HTTP proxy for API requests. Falls back to `HTTPS_PROXY` / `HTTP_PROXY` | — |
+| `SKILL_ANYTHING_WHISPER_MODEL` | Whisper API model name for audio transcription | `whisper-1` |
 
 The `.env` file is loaded automatically from the current working directory or the project root. Example:
 
@@ -501,7 +521,8 @@ Skill-Anything/
 │   │   ├── pdf_parser.py       # PDF extraction (pdfplumber / pymupdf / pypdf)
 │   │   ├── video_parser.py     # YouTube transcript / subtitle parsing
 │   │   ├── web_parser.py       # Webpage scraping (httpx + BeautifulSoup)
-│   │   └── text_parser.py      # Plain text / Markdown reading
+│   │   ├── text_parser.py      # Plain text / Markdown reading
+│   │   └── audio_parser.py     # Audio transcription (Whisper local / API)
 │   ├── generators/
 │   │   ├── knowledge_gen.py    # Summary, notes, glossary, cheat sheet, learning path
 │   │   ├── quiz_gen.py         # 6 quiz question types
@@ -603,7 +624,7 @@ The `.yaml` file is the structured data store that powers all interactive comman
 Contributions are welcome. To set up the development environment:
 
 ```bash
-git clone https://github.com/Skill-Anything/Skill-Anything.git
+git clone https://github.com/SYuan03/Skill-Anything.git
 cd Skill-Anything
 pip install -e ".[all,dev]"
 ```

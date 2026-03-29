@@ -337,6 +337,50 @@ a { color: inherit; text-decoration: none; }
 }
 .footer-right a:hover { color: var(--teal); }
 
+/* ── LLM PROVIDERS ── */
+.llm-grid {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+  margin-top: 32px;
+}
+.llm-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 22px; transition: all .2s;
+}
+.llm-card:hover { border-color: var(--teal); transform: translateY(-2px); }
+.llm-card .llm-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.llm-card .llm-name { font-size: 14px; font-weight: 600; }
+.llm-card .llm-note { font-size: 12px; color: var(--ink3); margin-left: 4px; }
+
+/* ── USE CASES ── */
+.usecases {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.usecase {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; transition: all .2s;
+}
+.usecase:hover { border-color: var(--purple); transform: translateY(-2px); }
+.usecase-icon { font-size: 28px; margin-bottom: 10px; }
+.usecase h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.usecase p { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+.usecase .usecase-tag {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  color: var(--teal); background: var(--teal-dim);
+  padding: 2px 8px; border-radius: 4px; margin-top: 10px;
+}
+
+/* ── TYPING ANIMATION ── */
+@keyframes blink { 50% { opacity: 0; } }
+.cursor-blink::after {
+  content: '\2588'; color: var(--teal); animation: blink 1s step-end infinite;
+}
+.typed-line { opacity: 0; }
+.typed-line.show { opacity: 1; transition: opacity .2s; }
+
 /* ── ANIMATIONS ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
@@ -377,6 +421,7 @@ a { color: inherit; text-decoration: none; }
       <a href="#output">Output</a>
       <a href="#demo">Demo</a>
       <a href="#quickstart">Quick Start</a>
+      <a href="#usecases">Use Cases</a>
     </div>
     <a href="https://github.com/SYuan03/Skill-Anything" class="nav-gh" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -401,10 +446,10 @@ a { color: inherit; text-decoration: none; }
       View Demo
     </a>
   </div>
-  <div class="hero-code anim anim-d4">
-    <div><span class="prompt">$</span> <span class="cmd">pip install skill-anything[all]</span></div>
-    <div><span class="prompt">$</span> <span class="cmd">sa auto paper.pdf --format skill</span> <span class="comment">&nbsp;# export as SKILL.md</span></div>
-    <div><span class="prompt">$</span> <span class="cmd">sa quiz output/paper.yaml</span> <span class="comment">&nbsp;# interactive quiz</span></div>
+  <div class="hero-code anim anim-d4" id="hero-terminal">
+    <div class="typed-line" data-delay="0"><span class="prompt">$</span> <span class="cmd">pip install skill-anything[all]</span></div>
+    <div class="typed-line" data-delay="800"><span class="prompt">$</span> <span class="cmd">sa auto paper.pdf --format skill</span> <span class="comment">&nbsp;# export as SKILL.md</span></div>
+    <div class="typed-line" data-delay="1600"><span class="prompt">$</span> <span class="cmd">sa quiz output/paper.yaml</span> <span class="comment">&nbsp;# interactive quiz</span></div>
   </div>
 </section>
 
@@ -421,6 +466,7 @@ a { color: inherit; text-decoration: none; }
         <span class="pipe-tag in">PDF</span>
         <span class="pipe-tag in">Video</span>
         <span class="pipe-tag in">Web</span>
+        <span class="pipe-tag in">Audio</span>
         <span class="pipe-tag in">Text</span>
       </div>
     </div>
@@ -456,7 +502,7 @@ a { color: inherit; text-decoration: none; }
       <div class="stat-label">Quiz Question Types</div>
     </div>
     <div class="stat">
-      <div class="stat-val amber">4</div>
+      <div class="stat-val amber">5</div>
       <div class="stat-label">Source Formats</div>
     </div>
     <div class="stat">
@@ -617,6 +663,91 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
+<!-- LLM PROVIDERS -->
+<section class="section" id="providers">
+  <div class="section-label">Compatibility</div>
+  <div class="section-title">Works with Any LLM</div>
+  <div class="section-desc">Use any OpenAI-compatible API &mdash; cloud or local. No vendor lock-in. Falls back to rule-based generation when no API key is set.</div>
+
+  <div class="llm-grid">
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--green)"></div>
+      <span class="llm-name">OpenAI</span>
+      <span class="llm-note">GPT-4o</span>
+    </div>
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--blue)"></div>
+      <span class="llm-name">DeepSeek</span>
+      <span class="llm-note">deepseek-chat</span>
+    </div>
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--purple)"></div>
+      <span class="llm-name">Qwen</span>
+      <span class="llm-note">qwen-max</span>
+    </div>
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--amber)"></div>
+      <span class="llm-name">Ollama</span>
+      <span class="llm-note">local</span>
+    </div>
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--rose)"></div>
+      <span class="llm-name">vLLM</span>
+      <span class="llm-note">local</span>
+    </div>
+    <div class="llm-card">
+      <div class="llm-dot" style="background:var(--ink3)"></div>
+      <span class="llm-name">Any OpenAI-compatible</span>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="section" id="usecases">
+  <div class="section-label">Use Cases</div>
+  <div class="section-title">Built for Every Learner</div>
+  <div class="section-desc">From students to teams, from self-study to AI agents.</div>
+
+  <div class="usecases">
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F393;</div>
+      <h4>Self-Study</h4>
+      <p>Turn any textbook, paper, or tutorial into an interactive study pack with quizzes and flashcards.</p>
+      <span class="usecase-tag">PDF &bull; Text</span>
+    </div>
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F3AC;</div>
+      <h4>Video Learning</h4>
+      <p>Convert YouTube lectures and conference talks into quizzable, structured notes.</p>
+      <span class="usecase-tag">Video URL</span>
+    </div>
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F3A7;</div>
+      <h4>Audio &amp; Podcasts</h4>
+      <p>Transcribe lectures, meetings, or podcasts and generate study materials from audio.</p>
+      <span class="usecase-tag">MP3 &bull; WAV &bull; M4A</span>
+    </div>
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F4DA;</div>
+      <h4>Exam Prep</h4>
+      <p>Auto-generate practice tests across 6 question types with A-F grading from any study material.</p>
+      <span class="usecase-tag">Any Source</span>
+    </div>
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F465;</div>
+      <h4>Team Training</h4>
+      <p>Generate onboarding quizzes and review materials from internal documentation.</p>
+      <span class="usecase-tag">PDF &bull; Web</span>
+    </div>
+    <div class="usecase">
+      <div class="usecase-icon">&#x1F916;</div>
+      <h4>AI Skill Creation</h4>
+      <p>Export as SKILL.md &mdash; drop into Claude Code, Cursor, or Codex as a reusable AI skill.</p>
+      <span class="usecase-tag">SKILL.md</span>
+    </div>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer class="footer">
   <div class="footer-left">
@@ -628,6 +759,46 @@ a { color: inherit; text-decoration: none; }
     <a href="https://github.com/SYuan03/Skill-Anything#python-api" target="_blank" rel="noopener">API Docs</a>
   </div>
 </footer>
+
+<script>
+// Typing animation for hero terminal
+(function(){
+  const terminal = document.getElementById('hero-terminal');
+  if (!terminal) return;
+  const lines = terminal.querySelectorAll('.typed-line');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        lines.forEach(function(line) {
+          const delay = parseInt(line.getAttribute('data-delay')) || 0;
+          setTimeout(function(){ line.classList.add('show'); }, delay);
+        });
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  observer.observe(terminal);
+})();
+
+// Scroll-driven fade-in for sections
+(function(){
+  const els = document.querySelectorAll('.section');
+  const obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+  els.forEach(function(el) {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'opacity .6s ease, transform .6s ease';
+    obs.observe(el);
+  });
+})();
+</script>
 
 </body>
 </html>

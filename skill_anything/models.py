@@ -17,6 +17,7 @@ class SourceType(str, Enum):
     VIDEO = "video"
     WEBPAGE = "webpage"
     TEXT = "text"
+    AUDIO = "audio"
 
 
 class Difficulty(str, Enum):

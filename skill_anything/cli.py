@@ -254,8 +254,31 @@ def text(
 
 
 @app.command()
+def audio(
+    path: str = typer.Argument(..., help="Path to audio file (.mp3, .wav, .m4a, .aac, .flac, .ogg, .wma)"),
+    title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
+    output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+) -> None:
+    """[bold cyan]Audio -> Skill[/bold cyan] Transcribe audio and generate a full learning pack."""
+    _show_banner()
+    console.print(f"[bold]Transcribing audio:[/bold] [cyan]{path}[/cyan]\n")
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Transcribing -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_audio(path, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
+
+
+@app.command()
 def auto(
-    source: str = typer.Argument(..., help="Any source: PDF path, YouTube URL, webpage URL, or text file"),
+    source: str = typer.Argument(..., help="Any source: PDF path, YouTube URL, webpage URL, audio file, or text file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Skill pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),

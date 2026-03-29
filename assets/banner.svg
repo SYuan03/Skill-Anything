@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" width="960" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c0f1a"/>
+      <stop offset="100%" stop-color="#131729"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <radialGradient id="orb1" cx="30%" cy="40%">
+      <stop offset="0%" stop-color="rgba(45,212,191,0.12)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="orb2" cx="70%" cy="60%">
+      <stop offset="0%" stop-color="rgba(167,139,250,0.1)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <filter id="blur1"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="320" fill="url(#bg)" rx="16"/>
+
+  <!-- Ambient orbs -->
+  <ellipse cx="280" cy="130" rx="260" ry="200" fill="url(#orb1)"/>
+  <ellipse cx="680" cy="190" rx="240" ry="180" fill="url(#orb2)"/>
+
+  <!-- Gradient accent line -->
+  <rect x="80" y="240" width="800" height="2" rx="1" fill="url(#glow)" opacity="0.4"/>
+
+  <!-- Title -->
+  <text x="480" y="110" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-weight="800" font-size="56" letter-spacing="-2" fill="url(#titleGrad)">Skill-Anything</text>
+
+  <!-- Subtitle -->
+  <text x="480" y="152" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-weight="400" font-size="18" fill="#94a3b8">Any Source &#x2192; Interactive Skills</text>
+
+  <!-- Pipeline visualization -->
+  <!-- Input tags -->
+  <g font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="12" font-weight="600">
+    <!-- PDF -->
+    <rect x="110" y="188" width="52" height="28" rx="6" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.3)" stroke-width="1"/>
+    <text x="136" y="206" text-anchor="middle" fill="#2dd4bf">PDF</text>
+    <!-- Video -->
+    <rect x="172" y="188" width="62" height="28" rx="6" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.3)" stroke-width="1"/>
+    <text x="203" y="206" text-anchor="middle" fill="#2dd4bf">Video</text>
+    <!-- Web -->
+    <rect x="244" y="188" width="52" height="28" rx="6" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.3)" stroke-width="1"/>
+    <text x="270" y="206" text-anchor="middle" fill="#2dd4bf">Web</text>
+    <!-- Audio -->
+    <rect x="306" y="188" width="62" height="28" rx="6" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.3)" stroke-width="1"/>
+    <text x="337" y="206" text-anchor="middle" fill="#2dd4bf">Audio</text>
+    <!-- Text -->
+    <rect x="378" y="188" width="52" height="28" rx="6" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.3)" stroke-width="1"/>
+    <text x="404" y="206" text-anchor="middle" fill="#2dd4bf">Text</text>
+  </g>
+
+  <!-- Arrow -->
+  <text x="456" y="208" font-family="'Inter',sans-serif" font-size="20" fill="#64748b">&#x2192;</text>
+
+  <!-- Engine badge -->
+  <rect x="484" y="186" width="80" height="32" rx="8" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.3)" stroke-width="1"/>
+  <text x="524" y="207" text-anchor="middle" font-family="'Inter',sans-serif" font-size="12" font-weight="700" fill="#fbbf24">AI Engine</text>
+
+  <!-- Arrow -->
+  <text x="586" y="208" font-family="'Inter',sans-serif" font-size="20" fill="#64748b">&#x2192;</text>
+
+  <!-- Output tags -->
+  <g font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="12" font-weight="600">
+    <rect x="614" y="188" width="74" height="28" rx="6" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>
+    <text x="651" y="206" text-anchor="middle" fill="#a78bfa">SKILL.md</text>
+    <rect x="698" y="188" width="52" height="28" rx="6" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>
+    <text x="724" y="206" text-anchor="middle" fill="#a78bfa">Quiz</text>
+    <rect x="760" y="188" width="80" height="28" rx="6" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>
+    <text x="800" y="206" text-anchor="middle" fill="#a78bfa">Flashcards</text>
+  </g>
+
+  <!-- Bottom tagline -->
+  <text x="480" y="272" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-weight="500" font-size="14" fill="#64748b">Stop consuming. Start retaining.</text>
+
+  <!-- Corner decorative dots -->
+  <circle cx="40" cy="40" r="3" fill="#2dd4bf" opacity="0.3"/>
+  <circle cx="920" cy="40" r="3" fill="#a78bfa" opacity="0.3"/>
+  <circle cx="40" cy="280" r="3" fill="#fbbf24" opacity="0.3"/>
+  <circle cx="920" cy="280" r="3" fill="#2dd4bf" opacity="0.3"/>
+</svg>

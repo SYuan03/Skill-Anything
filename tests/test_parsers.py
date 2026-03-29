@@ -80,3 +80,23 @@ def test_video_parser_srt_parsing():
     assert len(segments) == 2
     assert segments[0][1] == "Hello world"
     assert segments[1][1] == "This is a test"
+
+
+def test_audio_parser_supported_extensions():
+    from skill_anything.parsers.audio_parser import AudioParser
+    expected = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"}
+    assert AudioParser.SUPPORTED_EXTENSIONS == expected
+
+
+def test_audio_parser_rejects_unsupported():
+    from skill_anything.parsers.audio_parser import AudioParser
+    parser = AudioParser()
+    with pytest.raises(ValueError, match="Unsupported audio format"):
+        parser.parse("test.pdf")
+
+
+def test_audio_parser_rejects_missing_file():
+    from skill_anything.parsers.audio_parser import AudioParser
+    parser = AudioParser()
+    with pytest.raises(FileNotFoundError, match="Audio file not found"):
+        parser.parse("nonexistent.mp3")
