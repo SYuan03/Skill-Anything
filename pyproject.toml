@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skill-anything"
-version = "1.0.0"
+version = "0.1.0"
 description = "Skill-Anything: Turn Any Knowledge Source (PDF, Video, Web, Text) Into Interactive Skills — Quizzes, Flashcards, and Summaries"
 readme = "README.md"
 license = "MIT"
