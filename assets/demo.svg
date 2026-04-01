@@ -1,0 +1,268 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 580" width="820" height="580">
+<style>
+  /* ── Base ── */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes progressBar { from{width:0} to{width:100%} }
+
+  .term-bg { fill: #0d1117; }
+  .title-bar { fill: #161b22; }
+  .dot-r { fill: #ff5f57; }
+  .dot-y { fill: #febc2e; }
+  .dot-g { fill: #28c840; }
+  .title-text { fill: #8b949e; font: 12px 'SF Mono','Cascadia Code','JetBrains Mono',monospace; }
+
+  text { font-family: 'SF Mono','Cascadia Code','JetBrains Mono','Fira Code',monospace; }
+  .prompt { fill: #3fb950; font-size: 13px; }
+  .cmd { fill: #e6edf3; font-size: 13px; }
+  .flag { fill: #d2a8ff; font-size: 13px; }
+  .arg { fill: #a5d6ff; font-size: 13px; }
+  .comment { fill: #8b949e; font-size: 13px; }
+  .output { fill: #8b949e; font-size: 13px; }
+  .success { fill: #3fb950; font-size: 13px; }
+  .warn { fill: #d29922; font-size: 13px; }
+  .file { fill: #79c0ff; font-size: 13px; }
+  .dir { fill: #d2a8ff; font-size: 13px; font-weight: bold; }
+  .highlight { fill: #ffa657; font-size: 13px; }
+  .teal { fill: #39d353; font-size: 13px; }
+  .score { fill: #ffa657; font-size: 13px; font-weight: bold; }
+  .grade { fill: #3fb950; font-size: 15px; font-weight: bold; }
+  .quiz-q { fill: #e6edf3; font-size: 13px; font-weight: bold; }
+  .quiz-opt { fill: #c9d1d9; font-size: 13px; }
+  .quiz-correct { fill: #3fb950; font-size: 13px; font-weight: bold; }
+  .dim { fill: #484f58; font-size: 13px; }
+  .cursor { fill: #3fb950; animation: blink 1s step-end infinite; }
+  .border-line { fill: #d2a8ff; font-size: 13px; }
+
+  /* ── Phase animations ── */
+  /* Phase 1: First command types in (0s - 1.5s) */
+  .phase1 { opacity: 0; animation: fadeIn .05s ease forwards; }
+  .p1-d0 { animation-delay: 0s; }
+  .p1-d1 { animation-delay: 0.06s; }
+  .p1-d2 { animation-delay: 0.12s; }
+  .p1-d3 { animation-delay: 0.18s; }
+  .p1-d4 { animation-delay: 0.24s; }
+  .p1-d5 { animation-delay: 0.30s; }
+  .p1-d6 { animation-delay: 0.36s; }
+  .p1-d7 { animation-delay: 0.42s; }
+  .p1-d8 { animation-delay: 0.48s; }
+  .p1-d9 { animation-delay: 0.54s; }
+  .p1-d10 { animation-delay: 0.60s; }
+  .p1-d11 { animation-delay: 0.66s; }
+  .p1-d12 { animation-delay: 0.72s; }
+  .p1-d13 { animation-delay: 0.78s; }
+  .p1-d14 { animation-delay: 0.84s; }
+  .p1-d15 { animation-delay: 0.90s; }
+  .p1-d16 { animation-delay: 0.96s; }
+  .p1-d17 { animation-delay: 1.02s; }
+  .p1-d18 { animation-delay: 1.08s; }
+  .p1-d19 { animation-delay: 1.14s; }
+  .p1-d20 { animation-delay: 1.2s; }
+
+  /* Phase 2: Generation output (1.6s - 4.5s) */
+  .phase2 { opacity: 0; animation: slideIn .3s ease forwards; }
+  .p2-d0 { animation-delay: 1.6s; }
+  .p2-d1 { animation-delay: 2.0s; }
+  .p2-d2 { animation-delay: 2.5s; }
+  .p2-d3 { animation-delay: 3.0s; }
+  .p2-d4 { animation-delay: 3.4s; }
+  .p2-d5 { animation-delay: 3.7s; }
+  .p2-d6 { animation-delay: 4.0s; }
+  .p2-d7 { animation-delay: 4.3s; }
+  .p2-d8 { animation-delay: 4.5s; }
+  .p2-d9 { animation-delay: 4.7s; }
+
+  /* Phase 3: Second command + quiz (5.5s - 10s) */
+  .phase3 { opacity: 0; animation: fadeIn .05s ease forwards; }
+  .p3-d0 { animation-delay: 5.2s; }
+  .p3-d1 { animation-delay: 5.26s; }
+  .p3-d2 { animation-delay: 5.32s; }
+  .p3-d3 { animation-delay: 5.38s; }
+  .p3-d4 { animation-delay: 5.44s; }
+  .p3-d5 { animation-delay: 5.5s; }
+  .p3-d6 { animation-delay: 5.56s; }
+  .p3-d7 { animation-delay: 5.62s; }
+  .p3-d8 { animation-delay: 5.68s; }
+  .p3-d9 { animation-delay: 5.74s; }
+  .p3-d10 { animation-delay: 5.80s; }
+  .p3-d11 { animation-delay: 5.86s; }
+
+  /* Phase 4: Quiz content (6.5s+) */
+  .phase4 { opacity: 0; animation: slideIn .3s ease forwards; }
+  .p4-d0 { animation-delay: 6.3s; }
+  .p4-d1 { animation-delay: 6.6s; }
+  .p4-d2 { animation-delay: 6.9s; }
+  .p4-d3 { animation-delay: 7.2s; }
+  .p4-d4 { animation-delay: 7.5s; }
+  .p4-d5 { animation-delay: 7.8s; }
+  .p4-d6 { animation-delay: 8.3s; }
+  .p4-d7 { animation-delay: 8.8s; }
+  .p4-d8 { animation-delay: 9.3s; }
+  .p4-d9 { animation-delay: 9.6s; }
+  .p4-d10 { animation-delay: 10.0s; }
+
+  /* Progress bar */
+  .prog-track { fill: #21262d; rx: 3; }
+  .prog-fill-1 { fill: #3fb950; rx: 3; width: 0; animation: progressBar .8s ease forwards; animation-delay: 2.0s; }
+  .prog-fill-2 { fill: #d2a8ff; rx: 3; width: 0; animation: progressBar 1s ease forwards; animation-delay: 2.5s; }
+  .prog-fill-3 { fill: #ffa657; rx: 3; width: 0; animation: progressBar .6s ease forwards; animation-delay: 3.4s; }
+
+  /* Score box */
+  .score-box { fill: none; stroke: #3fb950; stroke-width: 2; rx: 8;
+    opacity: 0; animation: fadeIn .4s ease forwards; animation-delay: 10.0s; }
+</style>
+
+<!-- Terminal window -->
+<rect class="term-bg" width="820" height="580" rx="10"/>
+<rect class="title-bar" width="820" height="36" rx="10"/>
+<rect class="title-bar" y="26" width="820" height="10"/>
+<circle class="dot-r" cx="20" cy="18" r="6"/>
+<circle class="dot-y" cx="40" cy="18" r="6"/>
+<circle class="dot-g" cx="60" cy="18" r="6"/>
+<text class="title-text" x="410" y="22" text-anchor="middle">skill-anything — ~/projects</text>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PHASE 1: sa auto command (typing)       -->
+<!-- ════════════════════════════════════════ -->
+<text y="68" class="prompt"><tspan x="20">$</tspan></text>
+
+<!-- Typing: "sa auto transformer-paper.pdf --format skill" -->
+<text y="68" x="36" class="cmd phase1 p1-d0">s</text>
+<text y="68" x="44" class="cmd phase1 p1-d1">a</text>
+<text y="68" x="56" class="cmd phase1 p1-d2">a</text>
+<text y="68" x="64" class="cmd phase1 p1-d3">u</text>
+<text y="68" x="72" class="cmd phase1 p1-d4">t</text>
+<text y="68" x="80" class="cmd phase1 p1-d5">o</text>
+<text y="68" x="96" class="arg phase1 p1-d6">t</text>
+<text y="68" x="104" class="arg phase1 p1-d7">r</text>
+<text y="68" x="112" class="arg phase1 p1-d8">a</text>
+<text y="68" x="120" class="arg phase1 p1-d9">n</text>
+<text y="68" x="128" class="arg phase1 p1-d10">s</text>
+<text y="68" x="136" class="arg phase1 p1-d11">f</text>
+<text y="68" x="144" class="arg phase1 p1-d12">o</text>
+<text y="68" x="152" class="arg phase1 p1-d13">r</text>
+<text y="68" x="160" class="arg phase1 p1-d14">m</text>
+<text y="68" x="168" class="arg phase1 p1-d15">e</text>
+<text y="68" x="176" class="arg phase1 p1-d16">r</text>
+<text y="68" x="184" class="arg phase1 p1-d17">.</text>
+<text y="68" x="192" class="arg phase1 p1-d18">p</text>
+<text y="68" x="200" class="arg phase1 p1-d19">d</text>
+<text y="68" x="208" class="arg phase1 p1-d20">f</text>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PHASE 2: Generation output              -->
+<!-- ════════════════════════════════════════ -->
+<g class="phase2 p2-d0">
+  <text y="98" x="20" class="output">&#x1F4C4; Source: </text>
+  <text y="98" x="116" class="highlight">transformer.pdf</text>
+  <text y="98" x="260" class="dim">(PDF, 15 pages)</text>
+</g>
+
+<g class="phase2 p2-d1">
+  <text y="122" x="20" class="output">&#x1F50D; Extracting text...</text>
+  <text y="122" x="220" class="success">done</text>
+  <text y="122" x="260" class="dim">(12,847 chars)</text>
+</g>
+
+<!-- Progress: Knowledge generation -->
+<g class="phase2 p2-d2">
+  <text y="146" x="20" class="output">&#x1F9E0; Generating knowledge...</text>
+  <rect class="prog-track" x="250" y="136" width="160" height="8" rx="4"/>
+  <rect class="prog-fill-1" x="250" y="136" height="8" rx="4" style="width:160px"/>
+  <text y="146" x="420" class="success phase2 p2-d3">done</text>
+</g>
+
+<g class="phase2 p2-d3">
+  <text y="170" x="20" class="output">&#x2753; Generating quiz...</text>
+  <text y="170" x="220" class="success">32 questions</text>
+  <text y="170" x="350" class="dim">(6 types, 3 difficulty levels)</text>
+</g>
+
+<g class="phase2 p2-d4">
+  <text y="194" x="20" class="output">&#x1F5C3; Generating flashcards...</text>
+  <text y="194" x="250" class="success">45 cards</text>
+</g>
+
+<g class="phase2 p2-d5">
+  <text y="218" x="20" class="output">&#x1F4DD; Generating exercises...</text>
+  <text y="218" x="260" class="success">8 tasks</text>
+</g>
+
+<!-- Output file tree -->
+<g class="phase2 p2-d6">
+  <text y="250" x="20" class="success">&#x2705; Output written:</text>
+</g>
+<g class="phase2 p2-d7">
+  <text y="270" x="30" class="dir">output/</text>
+  <text y="288" x="50" class="file">&#x251C;&#x2500; transformer.yaml</text>
+  <text y="288" x="260" class="dim">structured data (quiz/review/info)</text>
+  <text y="306" x="50" class="file">&#x251C;&#x2500; transformer.md</text>
+  <text y="306" x="260" class="dim">12-section study guide</text>
+  <text y="324" x="50" class="file">&#x2514;&#x2500; transformer-concept-map.png</text>
+</g>
+
+<g class="phase2 p2-d8">
+  <text y="352" x="20" class="success">&#x2728; Done in 8.3s</text>
+</g>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PHASE 3: Quiz command (typing)          -->
+<!-- ════════════════════════════════════════ -->
+<text y="384" class="prompt phase2 p2-d9"><tspan x="20">$</tspan></text>
+
+<!-- Typing: "sa quiz output/transformer.yaml -d hard" -->
+<text y="384" x="36" class="cmd phase3 p3-d0">s</text>
+<text y="384" x="44" class="cmd phase3 p3-d1">a</text>
+<text y="384" x="56" class="cmd phase3 p3-d2">q</text>
+<text y="384" x="64" class="cmd phase3 p3-d3">u</text>
+<text y="384" x="72" class="cmd phase3 p3-d4">i</text>
+<text y="384" x="80" class="cmd phase3 p3-d5">z</text>
+<text y="384" x="96" class="arg phase3 p3-d6">o</text>
+<text y="384" x="104" class="arg phase3 p3-d7">u</text>
+<text y="384" x="112" class="arg phase3 p3-d8">t</text>
+<text y="384" x="120" class="arg phase3 p3-d9">p</text>
+<text y="384" x="128" class="arg phase3 p3-d10">u</text>
+<text y="384" x="136" class="arg phase3 p3-d11">t</text>
+
+<g class="phase4 p4-d0">
+  <text y="384" x="144" class="arg">/transformer.yaml</text>
+  <text y="384" x="296" class="flag">-d hard</text>
+</g>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PHASE 4: Quiz output                    -->
+<!-- ════════════════════════════════════════ -->
+<g class="phase4 p4-d1">
+  <text y="414" x="20" class="border-line">&#x2500;&#x2500;&#x2500; Q1/5 &#x2500;&#x2500;&#x2500;</text>
+  <text y="414" x="150" class="warn">HARD</text>
+  <text y="414" x="200" class="dim">(Scenario)</text>
+</g>
+
+<g class="phase4 p4-d2">
+  <text y="438" x="20" class="quiz-q">You're building a search engine where queries are short</text>
+</g>
+<g class="phase4 p4-d3">
+  <text y="456" x="20" class="quiz-q">but documents are very long. How would you adapt the</text>
+</g>
+<g class="phase4 p4-d4">
+  <text y="474" x="20" class="quiz-q">Transformer attention mechanism for efficiency?</text>
+</g>
+
+<g class="phase4 p4-d5">
+  <text y="498" x="20" class="teal">Answer &#x25B8;</text>
+  <text y="498" x="96" class="cmd">Use cross-attention with chunked document processing...</text>
+</g>
+
+<g class="phase4 p4-d6">
+  <text y="522" x="20" class="success">&#x2714; Correct!</text>
+  <text y="522" x="120" class="dim">Cross-attention with linear-complexity approximations</text>
+</g>
+
+<!-- Final score -->
+<g class="phase4 p4-d8">
+  <rect class="score-box" x="20" y="538" width="270" height="32" rx="6"/>
+  <text y="560" x="34" class="score">Score: 4/5 (80%)</text>
+  <text y="560" x="188" class="grade">Grade: A</text>
+</g>
+</svg>

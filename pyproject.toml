@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "skill-anything"
+version = "0.1.0"
+description = "Turn source material into study packs with quizzes, flashcards, notes, and optional SKILL.md exports for AI tools"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Skill-Anything Contributors" },
+]
+keywords = [
+    "skill-anything",
+    "pdf2skill",
+    "video2skill",
+    "web2skill",
+    "knowledge-extraction",
+    "quiz-generation",
+    "flashcards",
+    "interactive-learning",
+    "llm",
+    "ai-education",
+    "spaced-repetition",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+pdf = [
+    "pdfplumber>=0.10.0",
+]
+video = [
+    "youtube-transcript-api>=1.0.0",
+]
+audio = [
+    "openai-whisper>=20231117",
+]
+web = [
+    "beautifulsoup4>=4.12.0",
+]
+all = [
+    "pdfplumber>=0.10.0",
+    "youtube-transcript-api>=1.0.0",
+    "beautifulsoup4>=4.12.0",
+    "openai-whisper>=20231117",
+]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+skill-anything = "skill_anything.cli:app"
+sa = "skill_anything.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/SYuan03/Skill-Anything"
+Repository = "https://github.com/SYuan03/Skill-Anything"
+Issues = "https://github.com/SYuan03/Skill-Anything/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["skill_anything"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]

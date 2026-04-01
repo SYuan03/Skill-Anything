@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill-Anything — Interactive Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #09090b;
+  --surface: #111113;
+  --surface2: #18181b;
+  --border: #27272a;
+  --border-active: #3f3f46;
+  --text: #fafafa;
+  --text2: #a1a1aa;
+  --text3: #71717a;
+  --cyan: #22d3ee;
+  --cyan-dim: #0e7490;
+  --purple: #a78bfa;
+  --purple-dim: #6d28d9;
+  --green: #4ade80;
+  --green-dim: #166534;
+  --yellow: #fbbf24;
+  --yellow-dim: #92400e;
+  --red: #f87171;
+  --orange: #fb923c;
+  --mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* Header */
+.hero {
+  text-align: center;
+  margin-bottom: 56px;
+}
+.hero h1 {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  background: linear-gradient(135deg, var(--cyan), var(--purple), var(--yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+.hero .sub {
+  font-size: 18px;
+  color: var(--text2);
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.hero .desc {
+  margin-top: 20px;
+  color: var(--text3);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Scene selector */
+.scene-nav {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.scene-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all 0.2s;
+}
+.scene-btn:hover {
+  border-color: var(--border-active);
+  color: var(--text);
+  background: var(--surface2);
+}
+.scene-btn.active {
+  background: var(--cyan);
+  color: var(--bg);
+  border-color: var(--cyan);
+}
+
+/* Terminal */
+.terminal {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(34,211,238,0.04);
+}
+.titlebar {
+  background: var(--surface2);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.dots { display: flex; gap: 7px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.r { background: #ef4444; }
+.dot.y { background: #eab308; }
+.dot.g { background: #22c55e; }
+.titlebar .title {
+  color: var(--text3);
+  font-size: 13px;
+  font-family: var(--mono);
+  margin-left: 10px;
+}
+.term-body {
+  padding: 20px 24px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.8;
+  min-height: 500px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+.term-body::-webkit-scrollbar { width: 6px; }
+.term-body::-webkit-scrollbar-track { background: transparent; }
+.term-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Terminal line animation */
+.tl { opacity: 0; transform: translateY(3px); white-space: pre-wrap; word-break: break-word; }
+.tl.vis { opacity: 1; transform: translateY(0); transition: opacity 0.25s ease, transform 0.25s ease; }
+
+/* Terminal colors */
+.p { color: var(--cyan); }
+.c { color: var(--text); font-weight: 700; }
+.s { color: var(--green); }
+.w { color: var(--yellow); }
+.r { color: var(--red); }
+.v { color: var(--purple); }
+.d { color: var(--text3); }
+.b { font-weight: 700; }
+.u { text-decoration: underline; }
+
+/* Phase label */
+.ph {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Stat box */
+.stat-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 8px 0;
+  background: rgba(34,211,238,0.03);
+}
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 32px; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; }
+.stat-k { color: var(--text2); font-size: 13px; }
+.stat-v { font-weight: 700; font-size: 13px; }
+
+/* Quiz option highlight */
+.opt { color: var(--text3); }
+.opt.correct { color: var(--green); font-weight: 700; }
+
+/* Flashcard */
+.fc {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 6px 0;
+  background: var(--surface2);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.fc:hover { border-color: var(--border-active); }
+.fc-q { color: var(--text); font-weight: 600; font-size: 14px; }
+.fc-a { color: var(--text2); font-size: 13px; margin-top: 8px; display: none; }
+.fc.open .fc-a { display: block; }
+.fc-tags { margin-top: 6px; }
+.fc-tag {
+  display: inline-block;
+  background: rgba(167,139,250,0.12);
+  color: var(--purple);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-right: 4px;
+}
+
+/* Score banner */
+.score-box {
+  border: 2px solid var(--green);
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin: 8px 0;
+  text-align: center;
+  background: rgba(74,222,128,0.05);
+}
+
+/* Concept node */
+.concept-list { list-style: none; }
+.concept-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.concept-list li:last-child { border-bottom: none; }
+.concept-idx {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 12px;
+  min-width: 24px;
+}
+
+/* Study guide */
+.sg-section {
+  border-left: 3px solid var(--border);
+  padding: 8px 0 8px 16px;
+  margin: 6px 0;
+  transition: border-color 0.2s;
+}
+.sg-section:hover { border-color: var(--cyan); }
+.sg-title {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.sg-preview { color: var(--text3); font-size: 13px; line-height: 1.5; }
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+.ctrl-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all 0.2s;
+}
+.ctrl-btn:hover {
+  border-color: var(--cyan);
+  color: var(--text);
+}
+.ctrl-btn.primary {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  border: none;
+  color: var(--bg);
+}
+.ctrl-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(34,211,238,0.25);
+}
+
+/* Output tabs */
+.output-tabs {
+  display: none;
+  margin-top: 32px;
+}
+.output-tabs.active { display: block; }
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+.tab-panel {
+  display: none;
+  padding: 20px 0;
+}
+.tab-panel.active { display: block; }
+
+/* Glossary table */
+.glossary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.glossary-table th {
+  text-align: left;
+  color: var(--text3);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.glossary-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  line-height: 1.5;
+}
+.glossary-table td:first-child {
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.glossary-table tr:last-child td { border-bottom: none; }
+
+/* Exercise card */
+.ex-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 8px 0;
+  background: var(--surface2);
+}
+.ex-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.ex-desc { color: var(--text2); font-size: 13px; line-height: 1.5; }
+.ex-diff {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+.ex-diff.easy { background: rgba(74,222,128,0.12); color: var(--green); }
+.ex-diff.medium { background: rgba(251,191,36,0.12); color: var(--yellow); }
+.ex-diff.hard { background: rgba(248,113,113,0.12); color: var(--red); }
+
+/* Cursor blink */
+.cur {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background: var(--cyan);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .hero h1 { font-size: 32px; }
+  .term-body { padding: 14px 16px; font-size: 12px; min-height: 400px; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .page { padding: 24px 12px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <h1>Skill-Anything</h1>
+    <p class="sub">Any Source &rarr; Interactive Skills</p>
+    <p class="desc">
+      Turn any PDF, video, webpage, or text into a complete learning package — quizzes,
+      flashcards, structured notes, exercises, glossary, concept map, and more.
+    </p>
+  </div>
+
+  <div class="scene-nav">
+    <button class="scene-btn active" onclick="showScene('generate')">Generation Pipeline</button>
+    <button class="scene-btn" onclick="showScene('quiz')">Interactive Quiz</button>
+    <button class="scene-btn" onclick="showScene('output')">Output Explorer</button>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 1: Generation Pipeline                                  -->
+  <!-- ============================================================ -->
+  <div id="scene-generate" class="scene">
+    <div class="terminal">
+      <div class="titlebar">
+        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+        <span class="title">sa auto transformer-paper.pdf</span>
+      </div>
+      <div class="term-body" id="term-gen"></div>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn primary" onclick="replayGenerate()">&#8635; Replay</button>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 2: Interactive Quiz                                     -->
+  <!-- ============================================================ -->
+  <div id="scene-quiz" class="scene" style="display:none">
+    <div class="terminal">
+      <div class="titlebar">
+        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+        <span class="title">sa quiz output/transformer-learning-pack.yaml --difficulty hard</span>
+      </div>
+      <div class="term-body" id="term-quiz"></div>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn primary" onclick="replayQuiz()">&#8635; Replay</button>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 3: Output Explorer                                      -->
+  <!-- ============================================================ -->
+  <div id="scene-output" class="scene" style="display:none">
+    <div class="terminal" style="min-height: auto;">
+      <div class="titlebar">
+        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+        <span class="title">output/transformer-learning-pack.yaml &mdash; SkillPack Explorer</span>
+      </div>
+      <div style="padding: 0;">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="showTab('study')">Study Guide</button>
+          <button class="tab-btn" onclick="showTab('concepts')">Key Concepts</button>
+          <button class="tab-btn" onclick="showTab('glossary')">Glossary</button>
+          <button class="tab-btn" onclick="showTab('cards')">Flashcards</button>
+          <button class="tab-btn" onclick="showTab('exercises')">Exercises</button>
+          <button class="tab-btn" onclick="showTab('skillmd')">SKILL.md Export</button>
+        </div>
+
+        <!-- Study Guide -->
+        <div id="tab-study" class="tab-panel active" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            12-Section Study Guide &mdash; transformer-learning-pack.md
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">1. Summary</div>
+            <div class="sg-preview">The Transformer model replaces recurrence with self-attention, enabling parallel computation across sequence positions. It achieves state-of-the-art results on machine translation while being significantly faster to train...</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">2. Concept Map</div>
+            <div class="sg-preview" style="color:var(--cyan);">&#128506; AI-generated visual diagram — transformer-learning-pack-concept-map.png</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">3. Outline</div>
+            <div class="sg-preview">Page 1-2: Introduction & Motivation &bull; Page 3-5: Model Architecture &bull; Page 5-6: Attention Mechanisms &bull; Page 7: Training &bull; Page 8-9: Results &bull; Page 10: Conclusion</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">4. Detailed Notes</div>
+            <div class="sg-preview">Hierarchical notes covering encoder-decoder structure, multi-head attention, positional encoding, feed-forward networks, layer normalization, residual connections, training regime, and ablation studies...</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">5. Key Concepts</div>
+            <div class="sg-preview">12 concepts from foundational to advanced — Self-Attention, Multi-Head Attention, Positional Encoding, Layer Normalization, ...</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">6. Glossary</div>
+            <div class="sg-preview">18 domain terms with definitions and cross-references</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">7. Cheat Sheet</div>
+            <div class="sg-preview">One-page reference: Attention(Q,K,V) = softmax(QK<sup>T</sup>/&radic;d<sub>k</sub>)V &bull; d_model=512 &bull; h=8 heads &bull; d_k=d_v=64 &bull; FFN: 2048 inner &bull; Dropout=0.1 &bull; Label smoothing=0.1 ...</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">8. Takeaways</div>
+            <div class="sg-preview">5 actionable items — implement a minimal transformer, experiment with head counts, compare with RNN baselines, ...</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">9. Quiz (24 questions)</div>
+            <div class="sg-preview">MCQ &bull; True/False &bull; Fill-in-the-Blank &bull; Short Answer &bull; Scenario &bull; Comparison</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">10. Flashcards (30 cards)</div>
+            <div class="sg-preview">Spaced-repetition cards covering all key concepts and formulas</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">11. Exercises (6 tasks)</div>
+            <div class="sg-preview">Analysis &bull; Design &bull; Implementation &bull; Critique</div>
+          </div>
+          <div class="sg-section">
+            <div class="sg-title">12. Learning Path</div>
+            <div class="sg-preview">Prerequisites &rarr; Next Steps &rarr; Recommended Resources</div>
+          </div>
+        </div>
+
+        <!-- Key Concepts -->
+        <div id="tab-concepts" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            Key Concepts &mdash; ordered foundational &rarr; advanced
+          </div>
+          <ul class="concept-list">
+            <li><span class="concept-idx">01</span><span>Sequence-to-Sequence Learning — mapping input sequences to output sequences</span></li>
+            <li><span class="concept-idx">02</span><span>Attention Mechanism — computing relevance weights between all positions</span></li>
+            <li><span class="concept-idx">03</span><span>Self-Attention — each position attending to all other positions in the same sequence</span></li>
+            <li><span class="concept-idx">04</span><span>Scaled Dot-Product Attention — softmax(QK<sup>T</sup>/&radic;d<sub>k</sub>)V prevents gradient vanishing</span></li>
+            <li><span class="concept-idx">05</span><span>Multi-Head Attention — parallel attention with h=8 independent heads for richer representations</span></li>
+            <li><span class="concept-idx">06</span><span>Positional Encoding — sinusoidal functions injecting sequence order information</span></li>
+            <li><span class="concept-idx">07</span><span>Encoder-Decoder Architecture — 6 encoder layers + 6 decoder layers with cross-attention</span></li>
+            <li><span class="concept-idx">08</span><span>Feed-Forward Network — position-wise FFN with inner dimension 2048</span></li>
+            <li><span class="concept-idx">09</span><span>Residual Connections — skip connections around each sub-layer enabling gradient flow</span></li>
+            <li><span class="concept-idx">10</span><span>Layer Normalization — stabilizes training by normalizing across feature dimensions</span></li>
+            <li><span class="concept-idx">11</span><span>Masked Attention — preventing decoder from attending to future positions</span></li>
+            <li><span class="concept-idx">12</span><span>Parallelization — eliminating sequential bottleneck of RNNs, enabling GPU parallelism</span></li>
+          </ul>
+        </div>
+
+        <!-- Glossary -->
+        <div id="tab-glossary" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            Glossary &mdash; 18 terms with cross-references
+          </div>
+          <table class="glossary-table">
+            <thead><tr><th>Term</th><th>Definition</th><th>Related</th></tr></thead>
+            <tbody>
+              <tr><td>Attention</td><td>A mechanism that computes a weighted sum of values based on query-key compatibility scores</td><td style="color:var(--purple);font-size:12px;">Self-Attention, Cross-Attention</td></tr>
+              <tr><td>Self-Attention</td><td>Attention where queries, keys, and values all come from the same sequence</td><td style="color:var(--purple);font-size:12px;">Multi-Head Attention</td></tr>
+              <tr><td>Multi-Head</td><td>Running h parallel attention functions with different learned projections</td><td style="color:var(--purple);font-size:12px;">Attention, d_k</td></tr>
+              <tr><td>Positional Encoding</td><td>Sinusoidal or learned vectors added to embeddings to encode sequence position</td><td style="color:var(--purple);font-size:12px;">Embedding</td></tr>
+              <tr><td>Layer Norm</td><td>Normalization technique that normalizes across feature dimensions per token</td><td style="color:var(--purple);font-size:12px;">Batch Norm, Residual</td></tr>
+              <tr><td>Residual Connection</td><td>Skip connection that adds a sub-layer's input to its output: x + Sublayer(x)</td><td style="color:var(--purple);font-size:12px;">Layer Norm</td></tr>
+              <tr><td>BLEU</td><td>Bilingual Evaluation Understudy — precision-based metric for machine translation</td><td style="color:var(--purple);font-size:12px;">Translation, Evaluation</td></tr>
+              <tr><td>Byte-Pair Encoding</td><td>Subword tokenization that iteratively merges frequent character pairs</td><td style="color:var(--purple);font-size:12px;">Tokenization, Vocabulary</td></tr>
+            </tbody>
+          </table>
+          <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">+ 10 more terms in the full skill pack...</div>
+        </div>
+
+        <!-- Flashcards -->
+        <div id="tab-cards" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            Flashcards &mdash; click to reveal answers
+          </div>
+          <div class="fc" onclick="this.classList.toggle('open')">
+            <div class="fc-q">Why does scaled dot-product attention divide by &radic;d<sub>k</sub>?</div>
+            <div class="fc-a">Large dot products push softmax into regions with extremely small gradients. Dividing by &radic;d<sub>k</sub> keeps the variance of dot products at 1, regardless of the dimensionality, ensuring stable gradients during training.</div>
+            <div class="fc-tags"><span class="fc-tag">attention</span><span class="fc-tag">math</span></div>
+          </div>
+          <div class="fc" onclick="this.classList.toggle('open')">
+            <div class="fc-q">What is the purpose of multi-head attention vs single-head?</div>
+            <div class="fc-a">Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. With a single head, averaging inhibits this. With h=8 heads and d_k=64 each, cost is similar to a single head with full d_model=512.</div>
+            <div class="fc-tags"><span class="fc-tag">model</span><span class="fc-tag">multi-head</span></div>
+          </div>
+          <div class="fc" onclick="this.classList.toggle('open')">
+            <div class="fc-q">How does the Transformer handle sequence order without recurrence?</div>
+            <div class="fc-a">Through positional encodings — sinusoidal functions of different frequencies added to the input embeddings. PE(pos,2i) = sin(pos/10000^(2i/d_model)) and PE(pos,2i+1) = cos(pos/10000^(2i/d_model)). This allows the model to learn relative positions.</div>
+            <div class="fc-tags"><span class="fc-tag">positional-encoding</span></div>
+          </div>
+          <div class="fc" onclick="this.classList.toggle('open')">
+            <div class="fc-q">Why does the decoder use masked self-attention?</div>
+            <div class="fc-a">To preserve the auto-regressive property during training. The mask sets all positions to the right of the current position to -∞ before softmax, preventing the decoder from "cheating" by seeing future tokens it should be predicting.</div>
+            <div class="fc-tags"><span class="fc-tag">decoder</span><span class="fc-tag">masking</span></div>
+          </div>
+          <div class="fc" onclick="this.classList.toggle('open')">
+            <div class="fc-q">What is the computational complexity of self-attention vs recurrence?</div>
+            <div class="fc-a">Self-attention: O(n²·d) per layer. Recurrence: O(n·d²) per layer. Self-attention is faster when n &lt; d (typical for most NLP), and crucially, it has O(1) maximum path length vs O(n) for recurrence, enabling better gradient flow.</div>
+            <div class="fc-tags"><span class="fc-tag">complexity</span><span class="fc-tag">comparison</span></div>
+          </div>
+          <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">+ 25 more cards in the full skill pack...</div>
+        </div>
+
+        <!-- Exercises -->
+        <div id="tab-exercises" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            Practice Exercises
+          </div>
+          <div class="ex-card">
+            <div class="ex-title">Implement Scaled Dot-Product Attention <span class="ex-diff medium">MEDIUM</span></div>
+            <div class="ex-desc">Write a function that takes Q, K, V matrices and returns the attention output. Include the scaling factor and softmax. Test with a small example to verify correctness.</div>
+          </div>
+          <div class="ex-card">
+            <div class="ex-title">Analyze Multi-Head vs Single-Head <span class="ex-diff hard">HARD</span></div>
+            <div class="ex-desc">Design an experiment comparing a single attention head (d_k=512) vs 8 heads (d_k=64 each) on a sequence labeling task. Hypothesize which will perform better and explain why. Consider computational cost and representation capacity.</div>
+          </div>
+          <div class="ex-card">
+            <div class="ex-title">Positional Encoding Visualization <span class="ex-diff easy">EASY</span></div>
+            <div class="ex-desc">Plot the sinusoidal positional encoding matrix for sequence length 100 and d_model=64. Explain what patterns you observe and how they encode relative positions.</div>
+          </div>
+          <div class="ex-card">
+            <div class="ex-title">Critique: Transformer Limitations <span class="ex-diff hard">HARD</span></div>
+            <div class="ex-desc">The Transformer's self-attention has O(n²) complexity. Analyze three proposed solutions (Linformer, Performer, Flash Attention) and compare their trade-offs in accuracy, speed, and memory usage.</div>
+          </div>
+          <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">+ 2 more exercises in the full skill pack...</div>
+        </div>
+
+        <!-- SKILL.md Export -->
+        <div id="tab-skillmd" class="tab-panel" style="padding: 20px 24px;">
+          <div style="color:var(--text3);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:600;">
+            SKILL.md Export &mdash; Claude Code / Cursor / Codex Compatible
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--text2);">
+            <div style="color:var(--text3);margin-bottom:8px;"># sa export output/transformer.yaml --format skill</div>
+            <div style="margin-bottom:12px;">
+              <span style="color:var(--accent2);">output/transformer-architecture/</span><br/>
+              &nbsp;&nbsp;<span style="color:var(--accent1);font-weight:600;">SKILL.md</span><br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">references/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;detailed-notes.md<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;glossary.md<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;learning-path.md<br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">assets/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;quiz.yaml &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text3);"># 20 questions</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;flashcards.yaml <span style="color:var(--text3);"># 25 cards</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;exercises.yaml<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;concept-map.png<br/>
+              &nbsp;&nbsp;<span style="color:var(--text3);">scripts/</span><br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;quiz.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text3);"># standalone runner</span>
+            </div>
+          </div>
+          <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--text2);">
+            <div style="color:var(--accent1);font-weight:600;margin-bottom:4px;">SKILL.md Preview:</div>
+            <div style="color:var(--text3);">---</div>
+            <div><span style="color:var(--accent2);">name:</span> transformer-architecture</div>
+            <div><span style="color:var(--accent2);">description:</span> >-</div>
+            <div>&nbsp;&nbsp;This skill should be used when the user asks about</div>
+            <div>&nbsp;&nbsp;"self-attention", "multi-head attention", "transformer"...</div>
+            <div><span style="color:var(--accent2);">version:</span> 1.0.0</div>
+            <div style="color:var(--text3);">---</div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);font-weight:600;"># Transformer Architecture</span></div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);">## Overview</span></div>
+            <div style="color:var(--text3);font-style:italic;">The Transformer replaces recurrence with self-attention...</div>
+            <div style="margin-top:4px;"><span style="color:var(--accent1);">## Key Concepts</span></div>
+            <div>1. Self-Attention &nbsp;2. Multi-Head Attention &nbsp;3. QKV...</div>
+          </div>
+          <div style="color:var(--text3);font-size:13px;margin-top:12px;font-style:italic;">Copy to ~/.claude/skills/ or ~/.cursor/skills/ to use as an AI skill.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   Scene switching
+   ================================================================ */
+function showScene(name) {
+  document.querySelectorAll('.scene').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('scene-' + name).style.display = 'block';
+  event.target.classList.add('active');
+  if (name === 'generate') replayGenerate();
+  if (name === 'quiz') replayQuiz();
+}
+
+/* Tab switching */
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* ================================================================
+   Terminal animation engine
+   ================================================================ */
+function animateTerminal(el, lines, cb) {
+  el.innerHTML = '';
+  let i = 0, tid;
+  function step() {
+    if (i >= lines.length) { if (cb) cb(); return; }
+    const l = lines[i];
+    const div = document.createElement('div');
+    div.className = 'tl';
+    if (typeof l.html === 'string') {
+      div.innerHTML = l.html;
+    } else {
+      div.appendChild(l.html);
+    }
+    el.appendChild(div);
+    requestAnimationFrame(() => div.classList.add('vis'));
+    el.scrollTop = el.scrollHeight;
+    i++;
+    tid = setTimeout(step, (l.delay || 0) + 60);
+  }
+  step();
+  return () => clearTimeout(tid);
+}
+
+/* ================================================================
+   SCENE 1: Generation pipeline
+   ================================================================ */
+let stopGen;
+function replayGenerate() {
+  if (stopGen) stopGen();
+  const lines = [
+    { html: '<span class="p">$</span> <span class="c">sa auto transformer-paper.pdf</span>', delay: 0 },
+    { html: '', delay: 350 },
+    { html: '<span class="d">  Skill-Anything v1.0.0</span>', delay: 150 },
+    { html: '<span class="d">  Auto-detecting source type: </span><span class="b" style="color:var(--cyan)">PDF</span>', delay: 250 },
+    { html: '', delay: 150 },
+    { html: '<span class="ph">PARSE</span>  <span style="color:var(--cyan)">Reading PDF...</span> <span class="d">10 pages</span>', delay: 500 },
+    { html: '<span class="ph">PARSE</span>  <span style="color:var(--cyan)">Extracting text with pdfplumber...</span> <span class="d">28,473 chars</span>', delay: 450 },
+    { html: '<span class="ph">PARSE</span>  <span style="color:var(--cyan)">Chunking content...</span> <span class="d">8 knowledge chunks</span>', delay: 400 },
+    { html: '', delay: 200 },
+    { html: '<span class="ph">KNOWLEDGE</span>  <span class="v">Generating summary & detailed notes...</span>', delay: 700 },
+    { html: '<span class="ph">KNOWLEDGE</span>  <span class="v">Extracting key concepts...</span> <span class="d">12 concepts</span>', delay: 500 },
+    { html: '<span class="ph">KNOWLEDGE</span>  <span class="v">Building glossary...</span> <span class="d">18 terms</span>', delay: 450 },
+    { html: '<span class="ph">KNOWLEDGE</span>  <span class="v">Generating cheat sheet + takeaways...</span>', delay: 400 },
+    { html: '<span class="ph">KNOWLEDGE</span>  <span class="v">Planning learning path...</span>', delay: 350 },
+    { html: '', delay: 150 },
+    { html: '<span class="ph">QUIZ</span>  <span class="v">Generating questions (6 types)...</span> <span class="d">24 questions</span>', delay: 600 },
+    { html: '<span class="ph">FLASH</span>  <span class="v">Creating flashcards...</span> <span class="d">30 cards</span>', delay: 450 },
+    { html: '<span class="ph">PRACTICE</span>  <span class="v">Designing exercises...</span> <span class="d">6 tasks</span>', delay: 400 },
+    { html: '<span class="ph">VISUAL</span>  <span class="v">Generating concept map...</span> <span class="d">1024x1024 PNG</span>', delay: 550 },
+    { html: '', delay: 300 },
+    { html: '<span class="s b">&#10003; Skill pack generated successfully!</span>', delay: 350 },
+    { html: '', delay: 200 },
+    { html: buildStatBox(), delay: 80 },
+    { html: '', delay: 250 },
+    { html: '<span class="d">  output/</span>', delay: 120 },
+    { html: '<span class="d">  ├── </span><span class="s">transformer-learning-pack.yaml</span>              <span class="d">← structured data</span>', delay: 120 },
+    { html: '<span class="d">  ├── </span><span class="s">transformer-learning-pack.md</span>                <span class="d">← 12-section study guide</span>', delay: 120 },
+    { html: '<span class="d">  └── </span><span class="s">transformer-learning-pack-concept-map.png</span>  <span class="d">← visual concept map</span>', delay: 120 },
+    { html: '', delay: 350 },
+    { html: '<span class="d">  Next:</span>', delay: 100 },
+    { html: '<span class="d">    </span><span class="b">sa quiz</span><span class="d"> output/transformer-learning-pack.yaml       # interactive quiz</span>', delay: 80 },
+    { html: '<span class="d">    </span><span class="b">sa review</span><span class="d"> output/transformer-learning-pack.yaml     # flashcard review</span>', delay: 80 },
+    { html: '<span class="d">    </span><span class="b">sa info</span><span class="d"> output/transformer-learning-pack.yaml       # view details</span>', delay: 80 },
+    { html: '', delay: 250 },
+    { html: '<span class="p">$</span> <span class="cur"></span>', delay: 0 },
+  ];
+  stopGen = animateTerminal(document.getElementById('term-gen'), lines);
+}
+
+function buildStatBox() {
+  const el = document.createElement('div');
+  el.className = 'stat-box';
+  el.innerHTML = '<div class="stat-grid">' +
+    sr('Key Concepts', '12', 'var(--cyan)') +
+    sr('Glossary Terms', '18', 'var(--cyan)') +
+    sr('Quiz Questions', '24', 'var(--cyan)') +
+    sr('Flashcards', '30', 'var(--cyan)') +
+    sr('Exercises', '6', 'var(--cyan)') +
+    sr('Detailed Notes', '&#10003;', 'var(--green)') +
+    sr('Cheat Sheet', '&#10003;', 'var(--green)') +
+    sr('Learning Path', '&#10003;', 'var(--green)') +
+    '</div>';
+  return { html: el, delay: 80 };
+}
+function sr(k, v, c) {
+  return '<div class="stat-row"><span class="stat-k">' + k + '</span><span class="stat-v" style="color:' + c + '">' + v + '</span></div>';
+}
+
+/* ================================================================
+   SCENE 2: Interactive Quiz
+   ================================================================ */
+let stopQuiz;
+function replayQuiz() {
+  if (stopQuiz) stopQuiz();
+  const lines = [
+    { html: '<span class="p">$</span> <span class="c">sa quiz output/transformer-learning-pack.yaml -d hard -n 5</span>', delay: 0 },
+    { html: '', delay: 400 },
+    { html: '<span class="d">  Loading skill pack: Transformer Learning Pack</span>', delay: 250 },
+    { html: '<span class="d">  Filtering: 5 hard questions</span>', delay: 200 },
+    { html: '', delay: 300 },
+
+    // Q1
+    { html: '<span class="d">  ─── Q1/5 ───  </span><span class="w b">HARD</span><span class="d">  (Scenario)</span>', delay: 400 },
+    { html: '', delay: 150 },
+    { html: '<span class="b">  You are building a document search system where queries</span>', delay: 80 },
+    { html: '<span class="b">  are short (5-10 tokens) but documents are very long</span>', delay: 80 },
+    { html: '<span class="b">  (10K+ tokens). How would you adapt the Transformer</span>', delay: 80 },
+    { html: '<span class="b">  attention mechanism for this use case?</span>', delay: 250 },
+    { html: '', delay: 200 },
+    { html: '<span class="p">  Answer > </span><span class="b">Use cross-attention with the query as Q and chunked documents as K/V, with linear-complexity approximations</span>', delay: 600 },
+    { html: '', delay: 200 },
+    { html: '<span class="s">  &#10003; Correct!</span>', delay: 250 },
+    { html: '<span class="d">  Cross-attention naturally handles asymmetric lengths. For</span>', delay: 80 },
+    { html: '<span class="d">  efficiency, use Linformer-style projections or chunk the</span>', delay: 80 },
+    { html: '<span class="d">  documents and aggregate attention across chunks.</span>', delay: 200 },
+    { html: '', delay: 350 },
+
+    // Q2
+    { html: '<span class="d">  ─── Q2/5 ───  </span><span class="w b">HARD</span><span class="d">  (Comparison)</span>', delay: 350 },
+    { html: '', delay: 150 },
+    { html: '<span class="b">  Compare the Transformer\'s self-attention with the</span>', delay: 80 },
+    { html: '<span class="b">  recurrent attention in Bahdanau et al. What are the</span>', delay: 80 },
+    { html: '<span class="b">  key trade-offs in terms of parallelism, memory, and</span>', delay: 80 },
+    { html: '<span class="b">  ability to model long-range dependencies?</span>', delay: 250 },
+    { html: '', delay: 200 },
+    { html: '<span class="p">  Answer > </span><span class="b">Self-attention: O(1) path length, fully parallel, O(n²) memory. Bahdanau: sequential, O(n) path length, O(n) memory per step.</span>', delay: 600 },
+    { html: '', delay: 200 },
+    { html: '<span class="s">  &#10003; Correct!</span>', delay: 250 },
+    { html: '<span class="d">  Self-attention trades quadratic memory for O(1) maximum</span>', delay: 80 },
+    { html: '<span class="d">  path length and full parallelism. Bahdanau attention is</span>', delay: 80 },
+    { html: '<span class="d">  additive and sequential, limiting training speed.</span>', delay: 200 },
+    { html: '', delay: 350 },
+
+    // Q3
+    { html: '<span class="d">  ─── Q3/5 ───  </span><span class="w b">HARD</span><span class="d">  (Short Answer)</span>', delay: 350 },
+    { html: '', delay: 150 },
+    { html: '<span class="b">  The Transformer uses sinusoidal positional encodings</span>', delay: 80 },
+    { html: '<span class="b">  rather than learned ones. What mathematical property</span>', delay: 80 },
+    { html: '<span class="b">  makes sinusoidal encodings suitable for capturing</span>', delay: 80 },
+    { html: '<span class="b">  relative positions?</span>', delay: 250 },
+    { html: '', delay: 200 },
+    { html: '<span class="p">  Answer > </span><span class="b">PE(pos+k) can be expressed as a linear function of PE(pos), allowing the model to learn relative offsets</span>', delay: 600 },
+    { html: '', delay: 200 },
+    { html: '<span class="s">  &#10003; Correct!</span>', delay: 250 },
+    { html: '<span class="d">  For any fixed offset k, PE(pos+k) is a linear transform</span>', delay: 80 },
+    { html: '<span class="d">  of PE(pos) via rotation matrix — the model can attend to</span>', delay: 80 },
+    { html: '<span class="d">  relative positions by learning the linear projection.</span>', delay: 200 },
+    { html: '', delay: 350 },
+
+    // Q4
+    { html: '<span class="d">  ─── Q4/5 ───  </span><span class="w b">HARD</span><span class="d">  (Multiple Choice)</span>', delay: 350 },
+    { html: '', delay: 150 },
+    { html: '<span class="b">  In the Transformer decoder, what happens if you remove</span>', delay: 80 },
+    { html: '<span class="b">  the causal mask from self-attention during training?</span>', delay: 250 },
+    { html: '', delay: 150 },
+    { html: '<span class="opt">    A. Training becomes slower due to extra computation</span>', delay: 80 },
+    { html: '<span class="opt">    B. The model cannot generalize to longer sequences</span>', delay: 80 },
+    { html: '<span class="opt correct">    C. The model sees future tokens, making training trivial (data leakage)</span>', delay: 80 },
+    { html: '<span class="opt">    D. Gradient flow is disrupted, preventing convergence</span>', delay: 200 },
+    { html: '', delay: 200 },
+    { html: '<span class="p">  Answer > </span><span class="b">C</span>', delay: 400 },
+    { html: '<span class="s">  &#10003; Correct!</span>', delay: 250 },
+    { html: '<span class="d">  Without masking, the decoder can simply copy the next</span>', delay: 80 },
+    { html: '<span class="d">  token from its input, learning nothing useful.</span>', delay: 200 },
+    { html: '', delay: 350 },
+
+    // Q5
+    { html: '<span class="d">  ─── Q5/5 ───  </span><span class="w b">HARD</span><span class="d">  (Fill-in-the-Blank)</span>', delay: 350 },
+    { html: '', delay: 150 },
+    { html: '<span class="b">  The Transformer base model uses d_model=512, h=8 heads,</span>', delay: 80 },
+    { html: '<span class="b">  making each head operate with d_k = d_v = ___</span>', delay: 250 },
+    { html: '', delay: 200 },
+    { html: '<span class="p">  Answer > </span><span class="b">64</span>', delay: 400 },
+    { html: '<span class="s">  &#10003; Correct!</span>', delay: 250 },
+    { html: '<span class="d">  d_k = d_v = d_model / h = 512 / 8 = 64</span>', delay: 200 },
+    { html: '', delay: 400 },
+
+    // Score
+    { html: buildScoreBox(), delay: 300 },
+    { html: '', delay: 300 },
+    { html: '<span class="p">$</span> <span class="cur"></span>', delay: 0 },
+  ];
+  stopQuiz = animateTerminal(document.getElementById('term-quiz'), lines);
+}
+
+function buildScoreBox() {
+  const el = document.createElement('div');
+  el.className = 'score-box';
+  el.innerHTML = '<span style="font-size:16px;"><span class="b">Score: </span><span class="s b">5/5 (100%)</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="b">Grade: </span><span class="s b" style="font-size:20px;">A+</span></span>';
+  return { html: el, delay: 300 };
+}
+
+/* Boot */
+replayGenerate();
+</script>
+</body>
+</html>
