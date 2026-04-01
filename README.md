@@ -683,6 +683,8 @@ The `.yaml` file is the structured data store that powers all interactive comman
 
 Contributions are welcome. To set up the development environment:
 
+**PR must pass pytest & ruff checks**
+
 ```bash
 git clone https://github.com/SYuan03/Skill-Anything.git
 cd Skill-Anything
