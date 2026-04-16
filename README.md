@@ -60,12 +60,6 @@ Turn a repo into a reusable pack, re-import it, and validate it before sharing:
   <img src="assets/v02-demo.svg" alt="Skill-Anything v0.2 mini demo showing sa repo, sa import-skill, and sa lint in a terminal-style workflow" width="960"/>
 </p>
 
-<p align="center">
-  <img src="assets/v02-demo.gif" alt="Animated Skill-Anything v0.2 demo showing the repo-to-skill workflow in motion" width="960"/>
-  <br/>
-  <sub>Static overview first, then the same v0.2 loop in motion.</sub>
-</p>
-
 ```bash
 # 1) Generate from a repo
 sa repo https://github.com/openai/openai-python --output ./output/openai-python --format all
@@ -91,6 +85,23 @@ output/openai-python/
 ```
 
 This is the v0.2 advantage in one loop: generate from repos, reuse existing skills, and catch packaging problems before re-exporting.
+
+### Real Output Case
+
+`Transformer Architecture` is a good showcase because it makes both sides of Skill-Anything obvious:
+deep study-pack output for humans, and clean `SKILL.md` export for AI tools.
+
+<p align="center">
+  <img src="assets/v02-case-study-guide.png" alt="Study Guide output preview for the Transformer Architecture case" width="960"/>
+  <br/>
+  <sub>Case 1: a full study guide with summary, notes, glossary, cheat sheet, quiz, flashcards, exercises, and learning path.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/v02-case-skill-export.png" alt="SKILL.md export preview for the Transformer Architecture case" width="960"/>
+  <br/>
+  <sub>Case 2: the same pack exported as a reusable SKILL.md directory with references, assets, and scripts.</sub>
+</p>
 
 ## Why Skill-Anything?
 
