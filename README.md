@@ -60,6 +60,12 @@ Turn a repo into a reusable pack, re-import it, and validate it before sharing:
   <img src="assets/v02-demo.svg" alt="Skill-Anything v0.2 mini demo showing sa repo, sa import-skill, and sa lint in a terminal-style workflow" width="960"/>
 </p>
 
+<p align="center">
+  <img src="assets/v02-demo.gif" alt="Animated Skill-Anything v0.2 demo showing the repo-to-skill workflow in motion" width="960"/>
+  <br/>
+  <sub>Static overview first, then the same v0.2 loop in motion.</sub>
+</p>
+
 ```bash
 # 1) Generate from a repo
 sa repo https://github.com/openai/openai-python --output ./output/openai-python --format all
