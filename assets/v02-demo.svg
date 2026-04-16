@@ -36,52 +36,51 @@
     <text x="480" y="163" text-anchor="middle" fill="#8da2c0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="13">skill-anything  v0.2  demo</text>
 
     <text x="86" y="214" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">$</text>
-    <text x="108" y="214" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa repo github.com/openai/openai-python --format all</text>
+    <text x="108" y="214" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa repo gh:openai/openai-python</text>
 
     <text x="86" y="248" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[repo]</text>
-    <text x="154" y="248" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">selected 14 docs-first files, built onboarding notes and glossary</text>
+    <text x="154" y="248" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">scanned docs, built onboarding notes and glossary</text>
 
     <text x="86" y="278" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[pack]</text>
     <text x="154" y="278" fill="#67e8f9" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">study_guide.md</text>
-    <text x="294" y="278" fill="#64748b" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">quiz.md  flashcards.md  pack.yaml  skill/</text>
+    <text x="294" y="278" fill="#64748b" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">quiz.md  flashcards.md</text>
+    <text x="154" y="302" fill="#64748b" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">pack.yaml  skill/</text>
 
-    <text x="86" y="322" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">$</text>
-    <text x="108" y="322" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa import-skill ./output/openai-python/skill --format study</text>
+    <text x="86" y="338" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">$</text>
+    <text x="108" y="338" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa import-skill ./output/openai/skill</text>
 
-    <text x="86" y="356" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[import]</text>
-    <text x="166" y="356" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">restored frontmatter, references, quiz assets, and YAML pack</text>
+    <text x="86" y="372" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[import]</text>
+    <text x="166" y="372" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">restored frontmatter, refs, quiz assets, and YAML pack</text>
 
-    <text x="86" y="400" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">$</text>
-    <text x="108" y="400" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa lint ./output/openai-python/skill</text>
+    <text x="86" y="416" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">$</text>
+    <text x="108" y="416" fill="#e2e8f0" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="17">sa lint ./output/openai/skill</text>
 
-    <text x="86" y="434" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[lint]</text>
-    <text x="148" y="434" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">0 errors</text>
-    <text x="220" y="434" fill="#fbbf24" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">2 warnings</text>
-    <text x="318" y="434" fill="#64748b" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">ready to share or re-export</text>
+    <text x="86" y="450" fill="#94a3b8" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">[lint]</text>
+    <text x="148" y="450" fill="#4ade80" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">0 errors</text>
+    <text x="236" y="450" fill="#fbbf24" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="15">2 warnings</text>
 
     <line x1="548" y1="196" x2="548" y2="494" stroke="#22304b" stroke-width="1"/>
 
-    <rect x="86" y="462" width="398" height="40" rx="12" fill="#0f172a" stroke="#1e293b"/>
-    <text x="108" y="487" fill="#cbd5e1" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="14">output/openai-python/skill/SKILL.md</text>
-    <text x="452" y="487" text-anchor="end" fill="#a78bfa" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="14">reusable package</text>
+    <rect x="86" y="462" width="316" height="40" rx="12" fill="#0f172a" stroke="#1e293b"/>
+    <text x="108" y="487" fill="#cbd5e1" font-family="'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace" font-size="14">output/openai/skill/SKILL.md</text>
 
     <g>
-      <rect x="580" y="206" width="246" height="124" rx="18" fill="#0c1326" stroke="#23324f"/>
-      <text x="604" y="236" fill="#f8fafc" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="20" font-weight="700">What v0.2 adds</text>
-      <rect x="604" y="254" width="92" height="28" rx="10" fill="#0d2d31" stroke="#1d8f88"/>
-      <text x="650" y="272" text-anchor="middle" fill="#5eead4" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">sa repo</text>
-      <rect x="710" y="254" width="96" height="28" rx="10" fill="#232040" stroke="#6d62d9"/>
-      <text x="758" y="272" text-anchor="middle" fill="#c4b5fd" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="13" font-weight="700">import-skill</text>
-      <rect x="604" y="294" width="84" height="28" rx="10" fill="#2f260f" stroke="#a17b18"/>
-      <text x="646" y="312" text-anchor="middle" fill="#fcd34d" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">sa lint</text>
+      <rect x="596" y="206" width="230" height="124" rx="18" fill="#0c1326" stroke="#23324f"/>
+      <text x="620" y="236" fill="#f8fafc" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="20" font-weight="700">What v0.2 adds</text>
+      <rect x="620" y="254" width="92" height="28" rx="10" fill="#0d2d31" stroke="#1d8f88"/>
+      <text x="666" y="272" text-anchor="middle" fill="#5eead4" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">sa repo</text>
+      <rect x="726" y="254" width="80" height="28" rx="10" fill="#232040" stroke="#6d62d9"/>
+      <text x="766" y="272" text-anchor="middle" fill="#c4b5fd" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="13" font-weight="700">import</text>
+      <rect x="620" y="294" width="84" height="28" rx="10" fill="#2f260f" stroke="#a17b18"/>
+      <text x="662" y="312" text-anchor="middle" fill="#fcd34d" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="14" font-weight="700">sa lint</text>
     </g>
 
     <g>
-      <rect x="580" y="350" width="246" height="118" rx="18" fill="#0c1326" stroke="#23324f"/>
-      <text x="604" y="380" fill="#f8fafc" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="20" font-weight="700">Why it matters</text>
-      <text x="604" y="410" fill="#5eead4" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Generate onboarding packs from repos</text>
-      <text x="604" y="434" fill="#c4b5fd" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Bring external skills back into your flow</text>
-      <text x="604" y="458" fill="#fcd34d" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Catch packaging issues before sharing</text>
+      <rect x="596" y="350" width="230" height="118" rx="18" fill="#0c1326" stroke="#23324f"/>
+      <text x="620" y="380" fill="#f8fafc" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="20" font-weight="700">Why it matters</text>
+      <text x="620" y="410" fill="#5eead4" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Generate onboarding packs</text>
+      <text x="620" y="434" fill="#c4b5fd" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Reuse external skills</text>
+      <text x="620" y="458" fill="#fcd34d" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="15">Catch issues before sharing</text>
     </g>
   </g>
 

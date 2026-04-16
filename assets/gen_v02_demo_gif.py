@@ -34,14 +34,14 @@ def load_font(path: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
         return ImageFont.load_default()
 
 
-MONO = load_font(FONT_PATH, 17)
-MONO_SMALL = load_font(FONT_PATH, 15)
-MONO_MINI = load_font(FONT_PATH, 14)
-SANS_BOLD = load_font(SANS_PATH, 20)
-SANS = load_font(SANS_PATH, 15)
+MONO = load_font(FONT_PATH, 15)
+MONO_SMALL = load_font(FONT_PATH, 13)
+MONO_MINI = load_font(FONT_PATH, 13)
+SANS_BOLD = load_font(SANS_PATH, 18)
+SANS = load_font(SANS_PATH, 14)
 SANS_TITLE = load_font(SANS_PATH, 34)
 SANS_SUB = load_font(SANS_PATH, 18)
-SANS_CHIP = load_font(SANS_PATH, 14)
+SANS_CHIP = load_font(SANS_PATH, 13)
 
 
 def text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
@@ -76,18 +76,18 @@ def new_canvas() -> tuple[Image.Image, ImageDraw.ImageDraw]:
 
     draw.line((548, 196, 548, 494), fill=LINE, width=1)
 
-    draw.rounded_rectangle((580, 206, 826, 330), radius=18, fill="#0c1326", outline="#23324f", width=1)
-    draw.rounded_rectangle((580, 350, 826, 468), radius=18, fill="#0c1326", outline="#23324f", width=1)
+    draw.rounded_rectangle((596, 206, 826, 330), radius=18, fill="#0c1326", outline="#23324f", width=1)
+    draw.rounded_rectangle((596, 350, 826, 468), radius=18, fill="#0c1326", outline="#23324f", width=1)
 
-    draw.text((604, 220), "What v0.2 adds", fill=WHITE, font=SANS_BOLD)
-    chip(draw, (604, 254, 696, 282), "sa repo", "#0d2d31", "#1d8f88", "#5eead4")
-    chip(draw, (710, 254, 806, 282), "import-skill", "#232040", "#6d62d9", PURPLE, font=SANS_CHIP)
-    chip(draw, (604, 294, 688, 322), "sa lint", "#2f260f", "#a17b18", AMBER)
+    draw.text((620, 220), "What v0.2 adds", fill=WHITE, font=SANS_BOLD)
+    chip(draw, (620, 254, 712, 282), "sa repo", "#0d2d31", "#1d8f88", "#5eead4")
+    chip(draw, (726, 254, 806, 282), "import", "#232040", "#6d62d9", PURPLE, font=SANS_CHIP)
+    chip(draw, (620, 294, 704, 322), "sa lint", "#2f260f", "#a17b18", AMBER)
 
-    draw.text((604, 364), "Why it matters", fill=WHITE, font=SANS_BOLD)
-    draw.text((604, 400), "Generate onboarding packs from repos", fill="#5eead4", font=SANS)
-    draw.text((604, 424), "Bring external skills back into your flow", fill=PURPLE, font=SANS)
-    draw.text((604, 448), "Catch packaging issues before sharing", fill=AMBER, font=SANS)
+    draw.text((620, 364), "Why it matters", fill=WHITE, font=SANS_BOLD)
+    draw.text((620, 400), "Generate onboarding packs", fill="#5eead4", font=SANS)
+    draw.text((620, 424), "Reuse external skills", fill=PURPLE, font=SANS)
+    draw.text((620, 448), "Catch issues before sharing", fill=AMBER, font=SANS)
 
     pill(draw, (72, 554, 292, 588), "v0.2 mini demo")
     pill(draw, (306, 554, 552, 588), "generate -> import -> validate")
@@ -131,17 +131,18 @@ def draw_line(draw: ImageDraw.ImageDraw, x: int, y: int, spans: list[tuple[str, 
 
 LINES = [
     [("$ ", GREEN, MONO), ("sa repo ", WHITE, MONO), ("gh:openai/openai-python", SOFT, MONO)],
-    [("[repo] ", MUTED, MONO_SMALL), ("selected 14 docs-first files, built onboarding notes and glossary", SOFT, MONO_SMALL)],
-    [("[pack] ", MUTED, MONO_SMALL), ("study_guide.md", TEAL, MONO_SMALL), ("  quiz.md  flashcards.md  pack.yaml  skill/", DIM, MONO_SMALL)],
+    [("[repo] ", MUTED, MONO_SMALL), ("scanned docs, built onboarding notes and glossary", SOFT, MONO_SMALL)],
+    [("[pack] ", MUTED, MONO_SMALL), ("study_guide.md", TEAL, MONO_SMALL), ("  quiz.md  flashcards.md", DIM, MONO_SMALL)],
+    [("        ", MUTED, MONO_SMALL), ("pack.yaml  skill/", DIM, MONO_SMALL)],
     [("$ ", GREEN, MONO), ("sa import-skill ", WHITE, MONO), ("./output/openai/skill", SOFT, MONO)],
-    [("[import] ", MUTED, MONO_SMALL), ("restored frontmatter, references, quiz assets, and YAML pack", SOFT, MONO_SMALL)],
+    [("[import] ", MUTED, MONO_SMALL), ("restored frontmatter, refs, quiz assets, and YAML pack", SOFT, MONO_SMALL)],
     [("$ ", GREEN, MONO), ("sa lint ", WHITE, MONO), ("./output/openai/skill", SOFT, MONO)],
-    [("[lint] ", MUTED, MONO_SMALL), ("0 errors", GREEN, MONO_SMALL), ("  2 warnings", AMBER, MONO_SMALL), ("  ready to share or re-export", DIM, MONO_SMALL)],
+    [("[lint] ", MUTED, MONO_SMALL), ("0 errors", GREEN, MONO_SMALL), ("  2 warnings", AMBER, MONO_SMALL)],
 ]
 
 
 def bottom_bar(draw: ImageDraw.ImageDraw) -> None:
-    draw.rounded_rectangle((86, 462, 484, 502), radius=12, fill="#0f172a", outline="#1e293b", width=1)
+    draw.rounded_rectangle((86, 462, 402, 502), radius=12, fill="#0f172a", outline="#1e293b", width=1)
     draw.text((108, 474), "output/openai/skill/SKILL.md", fill=SOFT, font=MONO_MINI)
 
 
@@ -168,7 +169,7 @@ def build_frames() -> tuple[list[Image.Image], list[int]]:
         frames.append(img)
         durations.append(duration)
 
-    y_positions = [202, 238, 268, 310, 346, 388, 424]
+    y_positions = [202, 238, 268, 292, 338, 374, 416, 452]
 
     def render_until(draw: ImageDraw.ImageDraw, line_count: int, typed: int | None = None) -> None:
         for idx in range(line_count):
