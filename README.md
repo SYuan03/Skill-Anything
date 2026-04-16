@@ -52,6 +52,10 @@ sa lint ./output/my-skill
 
 > If v0.1 was “any source -> study pack”, v0.2 is “any source -> study pack -> reusable skill toolchain”.
 
+<p align="center">
+  <img src="assets/v02-toolchain.svg" alt="Skill-Anything v0.2 workflow: repo, import-skill, and lint feeding into study packs and SKILL.md exports" width="960"/>
+</p>
+
 ## Why Skill-Anything?
 
 AI agents are getting smarter, but **humans still learn the same broken way** — read, forget, re-read, forget again. Research shows passive reading retains ~10% of information, while active recall (quizzes, flashcards, spaced repetition) pushes retention to 80%+. Creating those materials manually? Nobody has time.
