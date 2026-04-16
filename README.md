@@ -52,9 +52,35 @@ sa lint ./output/my-skill
 
 > If v0.1 was “any source -> study pack”, v0.2 is “any source -> study pack -> reusable skill toolchain”.
 
-<p align="center">
-  <img src="assets/v02-toolchain.svg" alt="Skill-Anything v0.2 workflow: repo, import-skill, and lint feeding into study packs and SKILL.md exports" width="960"/>
-</p>
+### v0.2 Mini Demo
+
+Turn a repo into a reusable pack, re-import it, and validate it before sharing:
+
+```bash
+# 1) Generate from a repo
+sa repo https://github.com/openai/openai-python --output ./output/openai-python --format all
+
+# 2) Bring the exported skill back into your own workflow
+sa import-skill ./output/openai-python/skill --output ./output/openai-python-reimported --format study
+
+# 3) Validate the package before publishing
+sa lint ./output/openai-python/skill
+```
+
+```text
+output/openai-python/
+├── study_guide.md
+├── pack.yaml
+├── quiz.md
+├── flashcards.md
+└── skill/
+    ├── SKILL.md
+    ├── assets/
+    ├── references/
+    └── scripts/
+```
+
+This is the v0.2 advantage in one loop: generate from repos, reuse existing skills, and catch packaging problems before re-exporting.
 
 ## Why Skill-Anything?
 
