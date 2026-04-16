@@ -37,12 +37,20 @@
 - `sa import-skill <dir-or-skill-md>` imports an existing `SKILL.md` package back into a reusable study pack / YAML pack
 - `sa lint <dir-or-skill-md>` validates a skill package and fails on blocking packaging or asset errors
 
+**Best for in v0.2**
+
+- turning a codebase into onboarding notes, glossary, quiz, and learning path
+- importing external `SKILL.md` packages back into your own workflow
+- checking a skill package before you share, publish, or re-export it
+
 ```bash
 sa repo . --format all
 sa repo https://github.com/openai/openai-python --format study
 sa import-skill ./output/my-skill --format study
 sa lint ./output/my-skill
 ```
+
+> If v0.1 was “any source -> study pack”, v0.2 is “any source -> study pack -> reusable skill toolchain”.
 
 ## Why Skill-Anything?
 
@@ -177,6 +185,14 @@ sa audio lecture.mp3                                   # Audio → Study Pack
 sa repo .                                              # Local repo → Study Pack
 sa repo https://github.com/openai/openai-python        # Public GitHub repo → Study Pack
 sa auto anything                                       # Auto-detect source type
+```
+
+### 3.5. v0.2 Fast Paths
+
+```bash
+sa repo . --format all                                # repo -> study pack + SKILL.md export
+sa import-skill ./external-skill --format study       # existing skill -> YAML + study guide
+sa lint ./external-skill                              # validate before re-exporting or sharing
 ```
 
 ### 4. Import or Validate Existing Skills
