@@ -56,6 +56,10 @@ sa lint ./output/my-skill
 
 Turn a repo into a reusable pack, re-import it, and validate it before sharing:
 
+<p align="center">
+  <img src="assets/v02-demo.svg" alt="Skill-Anything v0.2 mini demo showing sa repo, sa import-skill, and sa lint in a terminal-style workflow" width="960"/>
+</p>
+
 ```bash
 # 1) Generate from a repo
 sa repo https://github.com/openai/openai-python --output ./output/openai-python --format all
