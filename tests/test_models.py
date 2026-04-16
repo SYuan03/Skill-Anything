@@ -20,6 +20,8 @@ def test_source_type_values():
     assert SourceType.VIDEO == "video"
     assert SourceType.WEBPAGE == "webpage"
     assert SourceType.TEXT == "text"
+    assert SourceType.REPO == "repo"
+    assert SourceType.SKILL == "skill"
 
 
 def test_question_types():

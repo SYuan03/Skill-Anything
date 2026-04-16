@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="#whats-new-in-v02">v0.2</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#demo">Demo</a> •
   <a href="#output-structure">Output</a> •
@@ -27,6 +28,21 @@
 </p>
 
 ---
+
+## What's New in v0.2
+
+**v0.2 turns Skill-Anything into a lightweight repo-to-skill toolchain.**
+
+- `sa repo <path-or-github-url>` scans a local repo or public GitHub repo and builds an onboarding-ready study pack
+- `sa import-skill <dir-or-skill-md>` imports an existing `SKILL.md` package back into a reusable study pack / YAML pack
+- `sa lint <dir-or-skill-md>` validates a skill package and fails on blocking packaging or asset errors
+
+```bash
+sa repo . --format all
+sa repo https://github.com/openai/openai-python --format study
+sa import-skill ./output/my-skill --format study
+sa lint ./output/my-skill
+```
 
 ## Why Skill-Anything?
 
@@ -158,10 +174,19 @@ sa video https://www.youtube.com/watch?v=dQw4w9WgXcQ   # Video → Study Pack
 sa web https://example.com/article                     # Webpage → Study Pack
 sa text notes.md                                       # Text → Study Pack
 sa audio lecture.mp3                                   # Audio → Study Pack
+sa repo .                                              # Local repo → Study Pack
+sa repo https://github.com/openai/openai-python        # Public GitHub repo → Study Pack
 sa auto anything                                       # Auto-detect source type
 ```
 
-### 4. Learn Interactively
+### 4. Import or Validate Existing Skills
+
+```bash
+sa import-skill ./output/my-skill --format study
+sa lint ./output/my-skill
+```
+
+### 5. Learn Interactively
 
 ```bash
 sa quiz output/my-skill.yaml       # Take an interactive quiz (6 types, graded A-F)
@@ -169,7 +194,7 @@ sa review output/my-skill.yaml     # Flashcard review (multi-round spaced repeti
 sa info output/my-skill.yaml       # View full pack details
 ```
 
-### 5. Export as an AI Skill When Needed
+### 6. Export as an AI Skill When Needed
 
 ```bash
 sa export output/my-skill.yaml --format skill
@@ -408,6 +433,18 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 - Sections detected from headings and structure
 - No extra dependencies needed
 
+### Repo
+
+- Accepts a local repository path or a public GitHub repo URL
+- Uses a **docs-first** scan: README, docs, manifests/config, then a small slice of key source files
+- Designed for onboarding packs, architecture summaries, glossary extraction, and contributor quizzes
+
+### Skill Import / Lint
+
+- `sa import-skill` restores an existing `SKILL.md` package back into a reusable YAML/study pack
+- `sa lint` checks frontmatter, referenced files, and asset YAML integrity before sharing or re-exporting
+- Useful for normalizing and validating externally created skills
+
 ### Auto-Detection
 
 `sa auto <source>` determines the type automatically:
@@ -415,8 +452,12 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | Input Pattern | Detected As |
 |:-------------|:------------|
 | `*.pdf` | PDF |
+| Local directory with `SKILL.md` | Skill package |
+| Local directory without `SKILL.md` | Repo |
+| GitHub repo URL (`github.com/<owner>/<repo>`) | Repo |
 | YouTube URL (`youtube.com`, `youtu.be`) | Video |
 | `http://` / `https://` | Webpage |
+| `SKILL.md` | Skill package |
 | `*.mp4`, `*.mkv`, `*.srt`, `*.vtt`, etc. | Video |
 | `*.mp3`, `*.wav`, `*.m4a`, `*.aac`, `*.flac`, `*.ogg`, `*.wma` | Audio |
 | Everything else | Text |
@@ -434,6 +475,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `sa web <url>` | Webpage → study pack | `sa web https://example.com/post` |
 | `sa text <src>` | Text / Markdown → study pack | `sa text notes.md` |
 | `sa audio <file>` | Audio → study pack (transcribe + generate) | `sa audio lecture.mp3` |
+| `sa repo <src>` | Local repo / public GitHub repo → study pack | `sa repo .` |
 | `sa auto <src>` | Auto-detect source type → study pack | `sa auto paper.pdf` |
 
 ### Interactive Commands
@@ -449,6 +491,8 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | Command | Description | Example |
 |:--------|:------------|:--------|
 | `sa export <yaml>` | Export existing YAML to a different format | `sa export x.yaml -f skill -o ./skills/` |
+| `sa import-skill <src>` | Import an existing `SKILL.md` package back into a study pack | `sa import-skill ./my-skill` |
+| `sa lint <src>` | Validate a skill package and fail on blocking issues | `sa lint ./my-skill` |
 
 ### Utility
 
@@ -460,9 +504,9 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 
 | Option | Short | Applies To | Description |
 |:-------|:------|:-----------|:------------|
-| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `audio`, `auto`, `export` | Output format: `study` (default), `skill` (SKILL.md), `all` |
-| `--title` | `-t` | `pdf`, `video`, `web`, `text`, `auto` | Custom title for the generated pack |
-| `--output` | `-o` | `pdf`, `video`, `web`, `text`, `auto`, `export` | Output directory (default: `./output`) |
+| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto`, `export`, `import-skill` | Output format: `study` (default), `skill` (SKILL.md), `all` |
+| `--title` | `-t` | `pdf`, `video`, `web`, `text`, `repo`, `auto`, `import-skill` | Custom title for the generated pack |
+| `--output` | `-o` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto`, `export`, `import-skill` | Output directory (default: `./output`) |
 | `--count` | `-n` | `quiz`, `review` | Number of questions / flashcards |
 | `--difficulty` | `-d` | `quiz` | Filter by difficulty: `easy`, `medium`, `hard` |
 | `--no-shuffle` | — | `quiz`, `review` | Keep original order instead of randomizing |
@@ -482,6 +526,8 @@ pack = engine.from_pdf("textbook.pdf", title="ML Fundamentals")
 pack = engine.from_video("https://youtube.com/watch?v=xxx")
 pack = engine.from_web("https://example.com/article")
 pack = engine.from_text("notes.md")
+pack = engine.from_repo(".")
+pack = engine.from_skill("./output/my-skill")
 pack = engine.from_source("auto-detect.pdf")  # auto-detect
 
 # Write to disk (creates .yaml + .md + .png)
@@ -591,6 +637,7 @@ Skill-Anything/
 | **Video Learning** | Convert YouTube lectures, conference talks, or courses into quizzable notes | Video URL |
 | **Research & Reading** | Extract structured knowledge from blog posts, documentation, or articles | Webpage |
 | **Team Training** | Generate onboarding quizzes and review materials from internal docs | PDF, Text |
+| **Repo Onboarding** | Turn a codebase into notes, glossary, quiz, and learning path for new contributors | Repo |
 | **Exam Prep** | Auto-generate practice tests from study materials | PDF, Text |
 | **Content Repurposing** | Turn long-form content into flashcards, cheat sheets, and exercises | Any |
 | **Teaching** | Create assessment materials from lesson plans or lecture notes | Text, PDF |
@@ -618,6 +665,16 @@ The pipeline is:
 3. Optionally export that pack as a `SKILL.md` directory for AI tools
 
 So the default output is better thought of as a **study pack** or **knowledge pack**. The `skill` format is an **optional export target** for agent ecosystems.
+
+</details>
+
+<details><summary><b>What changed in v0.2?</b></summary>
+
+v0.2 adds a lightweight skill toolchain on top of the existing study-pack workflow:
+
+- `sa repo` for local and public GitHub repositories
+- `sa import-skill` for importing existing `SKILL.md` packages back into YAML/study format
+- `sa lint` for validating skill packages before sharing or re-exporting them
 
 </details>
 

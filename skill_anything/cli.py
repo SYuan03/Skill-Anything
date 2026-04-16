@@ -18,11 +18,12 @@ from rich.tree import Tree
 
 from skill_anything import __version__
 from skill_anything.engine import Engine
+from skill_anything.linting import SkillLinter
 from skill_anything.models import SkillPack, slugify
 
 app = typer.Typer(
     name="skill-anything",
-    help="Skill-Anything: turn source material into study packs and optional SKILL.md exports",
+    help="Skill-Anything: turn source material, repos, and skills into study packs and SKILL.md exports",
     add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
@@ -134,6 +135,31 @@ def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") ->
             console.print(f"  {t}")
         if len(pack.takeaways) > 3:
             console.print(f"  [dim]... {len(pack.takeaways) - 3} more[/dim]")
+
+    metadata_lines: list[str] = []
+    if pack.source_type.value == "repo":
+        metadata_lines.append(f"[bold]Repo mode:[/bold] {pack.metadata.get('repo_mode', '-')}")
+        metadata_lines.append(
+            f"[bold]Files scanned:[/bold] {pack.metadata.get('total_files_scanned', '-')}"
+        )
+        metadata_lines.append(
+            f"[bold]Files selected:[/bold] {pack.metadata.get('selected_files', '-')}"
+        )
+    if pack.source_type.value == "skill":
+        metadata_lines.append(
+            f"[bold]Imported from:[/bold] {pack.metadata.get('imported_from', pack.source_ref)}"
+        )
+        metadata_lines.append(
+            f"[bold]Assets:[/bold] {len(pack.metadata.get('asset_files', []))}"
+        )
+        metadata_lines.append(
+            f"[bold]References:[/bold] {len(pack.metadata.get('reference_files', []))}"
+        )
+    if metadata_lines:
+        console.print()
+        console.print(
+            Panel("\n".join(metadata_lines), title="Source Metadata", border_style="blue")
+        )
 
     console.print()
 
@@ -287,7 +313,10 @@ def audio(
 
 @app.command()
 def auto(
-    source: str = typer.Argument(..., help="Any source: PDF path, YouTube URL, webpage URL, audio file, or text file"),
+    source: str = typer.Argument(
+        ...,
+        help="Any source: PDF, YouTube URL, webpage, audio file, repo path, GitHub repo, skill dir, or text file",
+    ),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
@@ -306,6 +335,85 @@ def auto(
         raise
     except Exception as e:
         _handle_error(e)
+
+
+@app.command()
+def repo(
+    source: str = typer.Argument(..., help="Path to a local repository or a public GitHub repo URL"),
+    title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
+    output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+) -> None:
+    """[bold cyan]Repo -> Study Pack[/bold cyan] Extract onboarding knowledge from a code repository."""
+    _show_banner()
+    console.print(f"[bold]Scanning repository:[/bold] [cyan]{source}[/cyan]\n")
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Docs-first scan -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
+            engine = Engine()
+            pack = engine.from_repo(source, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
+
+
+@app.command("import-skill")
+def import_skill(
+    source: str = typer.Argument(..., help="Path to a skill directory or SKILL.md file"),
+    title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
+    output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+) -> None:
+    """[bold cyan]Import Skill[/bold cyan] Convert an existing SKILL.md package back into a study pack."""
+    _show_banner()
+    console.print(f"[bold]Importing skill:[/bold] [cyan]{source}[/cyan]\n")
+    try:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("Importing -> Rebuilding study pack -> Exporting...", total=None)
+            engine = Engine()
+            pack = engine.from_skill(source, title=title)
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
+
+
+@app.command()
+def lint(
+    source: str = typer.Argument(..., help="Path to a skill directory or SKILL.md file"),
+) -> None:
+    """[bold yellow]Lint[/bold yellow] Validate a SKILL.md package for packaging and data issues."""
+    _show_banner()
+    console.print(f"[bold]Linting skill:[/bold] [cyan]{source}[/cyan]\n")
+
+    result = SkillLinter().lint(source)
+
+    if result.errors:
+        error_table = Table(title="Errors", border_style="red")
+        error_table.add_column("Path", style="bold red")
+        error_table.add_column("Message")
+        for issue in result.errors:
+            error_table.add_row(issue.path or "-", issue.message)
+        console.print(error_table)
+
+    if result.warnings:
+        warning_table = Table(title="Warnings", border_style="yellow")
+        warning_table.add_column("Path", style="bold yellow")
+        warning_table.add_column("Message")
+        for issue in result.warnings:
+            warning_table.add_row(issue.path or "-", issue.message)
+        console.print(warning_table)
+
+    if result.ok:
+        console.print(Panel("[bold green]No blocking errors found.[/bold green]", title="Lint Result", border_style="green"))
+        return
+
+    raise typer.Exit(1)
 
 
 # ======================================================================
@@ -433,6 +541,16 @@ def info(
             console.print(f"  [bold]{label}:[/bold]")
             for item in items:
                 console.print(f"    - {item}")
+
+    interesting_metadata = {
+        key: value
+        for key, value in pack.metadata.items()
+        if key in {"repo_mode", "repo_label", "total_files_scanned", "selected_files", "imported_from", "skill_name"}
+    }
+    if interesting_metadata:
+        console.print("\n[bold]Metadata:[/bold]")
+        for key, value in interesting_metadata.items():
+            console.print(f"  [bold]{key}:[/bold] {value}")
 
     console.print()
 
