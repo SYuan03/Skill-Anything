@@ -202,6 +202,8 @@ def pdf(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]PDF -> Study Pack[/bold cyan] Extract knowledge from a PDF and generate a full learning pack."""
     _show_banner()
@@ -209,7 +211,7 @@ def pdf(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_pdf(path, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -225,6 +227,8 @@ def video(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Video -> Study Pack[/bold cyan] Extract knowledge from a video and generate a full learning pack."""
     _show_banner()
@@ -232,7 +236,7 @@ def video(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcript -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_video(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -248,6 +252,8 @@ def web(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Web -> Study Pack[/bold cyan] Extract knowledge from a webpage and generate a full learning pack."""
     _show_banner()
@@ -255,7 +261,7 @@ def web(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Scraping -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_web(url, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -271,6 +277,8 @@ def text(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Text -> Study Pack[/bold cyan] Generate a full learning pack from text or Markdown."""
     _show_banner()
@@ -278,7 +286,7 @@ def text(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_text(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -294,6 +302,8 @@ def audio(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Audio -> Study Pack[/bold cyan] Transcribe audio and generate a full learning pack."""
     _show_banner()
@@ -301,7 +311,7 @@ def audio(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcribing -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_audio(path, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -320,6 +330,8 @@ def auto(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold green]Auto -> Pack[/bold green] Auto-detect source type and generate a full learning pack."""
     _show_banner()
@@ -327,7 +339,7 @@ def auto(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Detecting -> Extracting -> Generating study pack...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_source(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -343,6 +355,8 @@ def repo(
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
     format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Repo -> Study Pack[/bold cyan] Extract onboarding knowledge from a code repository."""
     _show_banner()
@@ -350,7 +364,7 @@ def repo(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Docs-first scan -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine()
+            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
             pack = engine.from_repo(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)

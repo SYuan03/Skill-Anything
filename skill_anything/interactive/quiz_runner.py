@@ -191,7 +191,9 @@ class QuizRunner:
         if user.lower() == answer.lower():
             return True
 
-        return user in answer.upper() or answer.upper() in user
+        # v0.3 fix: removed substring-match fallback. Previously `"A" in "ABLE"`
+        # incorrectly returned True for many MCQ answers.
+        return False
 
     def _show_results(self, elapsed: float) -> None:
         if self.total == 0:

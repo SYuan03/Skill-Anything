@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from skill_anything.models import KnowledgeChunk, SourceType
+from skill_anything.models import KnowledgeChunk, Section, SourceType
 from skill_anything.parsers.base import BaseParser
 from skill_anything.parsers.text_parser import TextParser
 
@@ -118,13 +118,22 @@ class RepoParser(BaseParser):
         "__init__",
     }
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_chars_budget: int = 240_000) -> None:
+        """Args:
+            max_chars_budget: rough cap on total characters of selected files.
+                ~240k chars ≈ 60k tokens, a comfortable budget that lets a
+                medium-sized repo's docs and core code all flow through the
+                map-reduce pipeline. Earlier v0.2 used hard counts (12/10/8)
+                which silently dropped large repos.
+        """
         self.stats: dict[str, Any] = {}
+        self.max_chars_budget = max_chars_budget
 
-    def parse(self, source: str) -> list[KnowledgeChunk]:
+    def parse_sections(self, source: str) -> list[Section]:
         if self._is_github_repo_url(source):
             repo_label, selected = self._load_github_repo(source)
             mode = "github"
+            candidates_count = self.stats.get("total_files_scanned", len(selected))
         else:
             repo_path = Path(source)
             if not repo_path.exists() or not repo_path.is_dir():
@@ -132,19 +141,17 @@ class RepoParser(BaseParser):
             repo_label, candidates = self._load_local_repo(repo_path)
             selected = self._select_files(candidates)
             mode = "local"
+            candidates_count = len(candidates)
 
-        chunks = self._build_chunks(selected, source)
+        sections = self._build_sections(selected, source)
         self.stats = {
             "repo_mode": mode,
             "repo_label": repo_label,
-            "total_files_scanned": self.stats.get(
-                "total_files_scanned",
-                len(candidates) if mode == "local" else len(selected),
-            ),
+            "total_files_scanned": candidates_count,
             "selected_files": len(selected),
             "selected_paths": [entry["path"] for entry in selected],
         }
-        return chunks
+        return sections
 
     @staticmethod
     def _is_github_repo_url(source: str) -> bool:
@@ -189,15 +196,34 @@ class RepoParser(BaseParser):
             if item.get("type") == "blob" and self._should_consider_path(path):
                 tree_candidates.append({"path": path, "content": ""})
 
+        # Path-only pre-selection: GitHub tree gives us no sizes/content, so we
+        # rank by category + name and take a generous slice of each. The
+        # post-fetch step below applies the real char budget.
+        pre_selected = self._select_paths_for_github(tree_candidates)
+
         candidates: list[dict[str, str]] = []
-        for entry in self._select_files(tree_candidates):
+        for entry in pre_selected:
             text = self._fetch_github_file(owner, repo, branch, entry["path"])
             if text and text.strip():
                 candidates.append({"path": entry["path"], "content": text})
 
+        selected = self._select_files(candidates)
         self.stats["total_files_scanned"] = len(tree_candidates)
 
-        return repo_info.get("full_name", f"{owner}/{repo}"), candidates
+        return repo_info.get("full_name", f"{owner}/{repo}"), selected
+
+    def _select_paths_for_github(self, candidates: list[dict[str, str]]) -> list[dict[str, str]]:
+        """Path-only selection for GitHub — pick a generous slice of each category
+        before download, since we'll budget-filter after fetching content."""
+        docs = [e for e in candidates if self._classify_path(e["path"]) == "docs"]
+        manifests = [e for e in candidates if self._classify_path(e["path"]) == "manifest"]
+        code = [e for e in candidates if self._classify_path(e["path"]) == "code"]
+
+        docs.sort(key=lambda e: self._docs_sort_key(e["path"]))
+        manifests.sort(key=lambda e: self._manifest_sort_key(e["path"]))
+        code.sort(key=lambda e: self._code_sort_key(e["path"]))
+
+        return docs[:30] + manifests[:15] + code[:20]
 
     @staticmethod
     def _parse_github_repo(source: str) -> tuple[str, str]:
@@ -266,6 +292,13 @@ class RepoParser(BaseParser):
         return True
 
     def _select_files(self, candidates: list[dict[str, str]]) -> list[dict[str, str]]:
+        """Select files by category priority, capped by total character budget.
+
+        v0.3: replaces the v0.2 hard cap of [:12]+[:10]+[:8] with a token-budget
+        allocation that gives docs the largest share but never silently drops a
+        whole category. Per-category soft minima ensure tiny repos still surface
+        their code, large repos still keep room for manifests/code.
+        """
         docs = [entry for entry in candidates if self._classify_path(entry["path"]) == "docs"]
         manifests = [entry for entry in candidates if self._classify_path(entry["path"]) == "manifest"]
         code = [entry for entry in candidates if self._classify_path(entry["path"]) == "code"]
@@ -274,15 +307,27 @@ class RepoParser(BaseParser):
         manifests.sort(key=lambda entry: self._manifest_sort_key(entry["path"]))
         code.sort(key=lambda entry: self._code_sort_key(entry["path"]))
 
-        ordered = docs[:12] + manifests[:10] + code[:8]
+        # Soft budget per category (chars). Docs get the biggest share, code
+        # second, manifests are usually small so a tight cap is fine.
+        docs_budget = int(self.max_chars_budget * 0.5)
+        manifest_budget = int(self.max_chars_budget * 0.15)
+        code_budget = self.max_chars_budget - docs_budget - manifest_budget
 
         selected: list[dict[str, str]] = []
         seen: set[str] = set()
-        for entry in ordered:
-            if entry["path"] in seen:
-                continue
-            seen.add(entry["path"])
-            selected.append(entry)
+        for group, budget in [(docs, docs_budget), (manifests, manifest_budget), (code, code_budget)]:
+            spent = 0
+            for entry in group:
+                if entry["path"] in seen:
+                    continue
+                size = len(entry["content"])
+                # Always take at least the first file of a group, even if it
+                # alone exceeds the budget (single-file repos shouldn't return empty).
+                if spent and spent + size > budget:
+                    continue
+                seen.add(entry["path"])
+                selected.append(entry)
+                spent += size
 
         return selected
 
@@ -314,12 +359,13 @@ class RepoParser(BaseParser):
             rel_path.lower(),
         )
 
-    def _build_chunks(self, selected: list[dict[str, str]], source: str) -> list[KnowledgeChunk]:
+    def _build_sections(self, selected: list[dict[str, str]], source: str) -> list[Section]:
+        """One Section per selected file (a file is the natural unit for repos)."""
         text_parser = TextParser()
-        chunks: list[KnowledgeChunk] = []
+        sections: list[Section] = []
         chunk_index = 0
 
-        for entry in selected:
+        for sec_idx, entry in enumerate(selected):
             rel_path = entry["path"]
             text = entry["content"].strip()
             if not text:
@@ -327,22 +373,33 @@ class RepoParser(BaseParser):
 
             suffix = Path(rel_path).suffix.lower()
             if suffix in {".md", ".mdx", ".rst", ".txt"}:
-                sections = text_parser._split_by_headings(text)
+                heading_groups = text_parser._split_by_headings(text)
             else:
-                sections = [(rel_path, text)]
+                heading_groups = [(rel_path, text)]
 
-            for heading, body in sections:
+            section_chunks: list[KnowledgeChunk] = []
+            for heading, body in heading_groups:
                 if not body.strip():
                     continue
                 for sub_chunk in self._split_into_chunks(body, max_chars=1800, overlap=120):
-                    chunks.append(
+                    section_chunks.append(
                         KnowledgeChunk(
                             content=sub_chunk,
                             section=f"{rel_path} :: {heading or rel_path}",
+                            section_id=f"sec-{sec_idx + 1:03d}",
                             chunk_index=chunk_index,
                             metadata={"source": source, "path": rel_path},
                         )
                     )
                     chunk_index += 1
 
-        return chunks
+            if section_chunks:
+                sections.append(
+                    Section(
+                        id=f"sec-{sec_idx + 1:03d}",
+                        title=rel_path,
+                        chunks=section_chunks,
+                        metadata={"source": source, "path": rel_path},
+                    )
+                )
+        return sections

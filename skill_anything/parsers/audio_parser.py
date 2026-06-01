@@ -12,10 +12,12 @@ import logging
 import os
 from pathlib import Path
 
-from skill_anything.models import KnowledgeChunk, SourceType
+from skill_anything.models import KnowledgeChunk, Section, SourceType
 from skill_anything.parsers.base import BaseParser
 
 log = logging.getLogger(__name__)
+
+SECTION_DURATION_SECONDS = 300
 
 
 class AudioParser(BaseParser):
@@ -23,7 +25,7 @@ class AudioParser(BaseParser):
 
     SUPPORTED_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"}
 
-    def parse(self, source: str) -> list[KnowledgeChunk]:
+    def parse_sections(self, source: str) -> list[Section]:
         p = Path(source)
         if p.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
             raise ValueError(
@@ -34,7 +36,7 @@ class AudioParser(BaseParser):
             raise FileNotFoundError(f"Audio file not found: {source}")
 
         segments = self._transcribe(source)
-        return self._build_chunks(segments, source)
+        return self._build_sections(segments, source)
 
     def _transcribe(self, path: str) -> list[tuple[str, str]]:
         """Transcribe audio. Try local Whisper first, then OpenAI API."""
@@ -140,35 +142,84 @@ class AudioParser(BaseParser):
             log.warning("Whisper API transcription failed: %s", e)
             return None
 
-    def _build_chunks(
+    def _build_sections(
         self, segments: list[tuple[str, str]], source: str
-    ) -> list[KnowledgeChunk]:
-        combined = "\n".join(text for _, text in segments)
-        raw_chunks = self._split_into_chunks(combined, max_chars=1500)
+    ) -> list[Section]:
+        if not segments:
+            return []
 
-        chunks: list[KnowledgeChunk] = []
-        seg_idx = 0
-        char_offset = 0
+        sections: list[Section] = []
+        chunk_index = 0
+        sec_idx = 0
+        bucket_start = 0
+        bucket: list[tuple[int, str, str]] = []
 
-        for i, chunk_text in enumerate(raw_chunks):
-            timestamp = segments[min(seg_idx, len(segments) - 1)][0] if segments else "00:00"
+        for ts, text in segments:
+            sec_time = self._timestamp_to_seconds(ts)
+            if sec_time - bucket_start >= SECTION_DURATION_SECONDS and bucket:
+                sec_idx += 1
+                chunk_index = self._flush(sections, bucket, sec_idx, chunk_index, source)
+                bucket_start = sec_time
+                bucket = []
+            bucket.append((sec_time, ts, text))
 
-            chunks.append(
+        if bucket:
+            sec_idx += 1
+            self._flush(sections, bucket, sec_idx, chunk_index, source)
+
+        return sections
+
+    def _flush(
+        self,
+        sections: list[Section],
+        segs: list[tuple[int, str, str]],
+        sec_idx: int,
+        chunk_index: int,
+        source: str,
+    ) -> int:
+        if not segs:
+            return chunk_index
+        section_id = f"sec-{sec_idx:03d}"
+        first_ts = segs[0][1]
+        last_ts = segs[-1][1]
+        title = f"{first_ts}–{last_ts}"
+        body = "\n".join(text for _, _, text in segs)
+        section_chunks: list[KnowledgeChunk] = []
+        for sub in self._split_into_chunks(body, max_chars=1500):
+            section_chunks.append(
                 KnowledgeChunk(
-                    content=chunk_text,
-                    section=f"@{timestamp}",
-                    chunk_index=i,
-                    source_time=timestamp,
-                    metadata={"source": source},
+                    content=sub,
+                    section=title,
+                    section_id=section_id,
+                    chunk_index=chunk_index,
+                    source_time=first_ts,
+                    metadata={"source": source, "time_range": title},
                 )
             )
+            chunk_index += 1
+        if section_chunks:
+            sections.append(
+                Section(
+                    id=section_id,
+                    title=title,
+                    chunks=section_chunks,
+                    metadata={
+                        "source": source,
+                        "time_start": first_ts,
+                        "time_end": last_ts,
+                    },
+                )
+            )
+        return chunk_index
 
-            char_offset += len(chunk_text)
-            while seg_idx < len(segments) - 1:
-                seg_len = len(segments[seg_idx][1]) + 1
-                if seg_len > char_offset:
-                    break
-                char_offset -= seg_len
-                seg_idx += 1
-
-        return chunks
+    @staticmethod
+    def _timestamp_to_seconds(ts: str) -> int:
+        parts = ts.split(":")
+        try:
+            if len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+            if len(parts) == 3:
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        except ValueError:
+            return 0
+        return 0

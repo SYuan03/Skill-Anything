@@ -5,44 +5,60 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from skill_anything.models import KnowledgeChunk, SourceType
+from skill_anything.models import KnowledgeChunk, Section, SourceType
 from skill_anything.parsers.base import BaseParser
 
 
 class TextParser(BaseParser):
     source_type = SourceType.TEXT
 
-    def parse(self, source: str) -> list[KnowledgeChunk]:
-        path = Path(source)
-        if path.exists():
+    def parse_sections(self, source: str) -> list[Section]:
+        # Inline text strings (esp. multi-line) can exceed OS path-length
+        # limits, which makes a naive Path(source).exists() raise OSError.
+        # Anything with newlines or beyond typical path length is treated as
+        # inline content, not a path.
+        looks_like_path = "\n" not in source and len(source) < 512
+        path = Path(source) if looks_like_path else None
+        if path is not None and path.exists():
             text = path.read_text(encoding="utf-8")
             ref = str(path)
         else:
             text = source
             ref = "<inline>"
 
-        sections = self._split_by_headings(text)
-        if not sections:
-            sections = [("", text)]
+        heading_sections = self._split_by_headings(text)
+        if not heading_sections:
+            heading_sections = [("", text)]
 
-        chunks: list[KnowledgeChunk] = []
-        idx = 0
-        for heading, body in sections:
+        sections: list[Section] = []
+        chunk_idx = 0
+        for sec_idx, (heading, body) in enumerate(heading_sections):
             if not body.strip():
                 continue
-            sub_chunks = self._split_into_chunks(body, max_chars=2000)
-            for sub in sub_chunks:
-                chunks.append(
+            section_id = f"sec-{sec_idx + 1:03d}"
+            section_title = heading or f"Section {sec_idx + 1}"
+            section_chunks: list[KnowledgeChunk] = []
+            for sub in self._split_into_chunks(body, max_chars=2000):
+                section_chunks.append(
                     KnowledgeChunk(
                         content=sub,
-                        section=heading or f"Section {idx + 1}",
-                        chunk_index=idx,
+                        section=section_title,
+                        section_id=section_id,
+                        chunk_index=chunk_idx,
                         metadata={"source": ref},
                     )
                 )
-                idx += 1
-
-        return chunks
+                chunk_idx += 1
+            if section_chunks:
+                sections.append(
+                    Section(
+                        id=section_id,
+                        title=section_title,
+                        chunks=section_chunks,
+                        metadata={"source": ref},
+                    )
+                )
+        return sections
 
     @staticmethod
     def _split_by_headings(text: str) -> list[tuple[str, str]]:

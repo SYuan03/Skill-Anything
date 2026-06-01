@@ -1,11 +1,13 @@
 """Core orchestration engine — ties parsers and generators together.
 
-Pipeline:  Source -> Parser -> KnowledgeChunk[] -> Generators -> SkillPack
+Pipeline:  Source -> Parser -> Section[] (each containing KnowledgeChunk[])
+           -> Generators (map-reduce, per-section concurrent) -> SkillPack
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from skill_anything.exporters.skill_exporter import SkillExporter
@@ -33,11 +35,21 @@ log = logging.getLogger(__name__)
 class Engine:
     """High-level API that converts any knowledge source into a SkillPack."""
 
-    def __init__(self) -> None:
-        self.knowledge_gen = KnowledgeGenerator()
-        self.quiz_gen = QuizGenerator()
-        self.flashcard_gen = FlashcardGenerator()
-        self.practice_gen = PracticeGenerator()
+    def __init__(
+        self,
+        *,
+        concurrency: int | None = None,
+        cache_enabled: bool = True,
+    ) -> None:
+        if concurrency is None:
+            try:
+                concurrency = int(os.getenv("SKILL_ANYTHING_CONCURRENCY", "4"))
+            except ValueError:
+                concurrency = 4
+        self.concurrency = max(1, concurrency)
+        self.cache_enabled = cache_enabled
+        # Generators are created per-call inside _build so we can wire the
+        # output-specific cache directory in.
         self.visual_gen = VisualGenerator()
         self.skill_exporter = SkillExporter()
 
@@ -48,50 +60,51 @@ class Engine:
     def from_pdf(self, path: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.pdf_parser import PDFParser
 
-        chunks = PDFParser().parse(path)
+        sections = PDFParser().parse_sections(path)
         auto_title = title or Path(path).stem.replace("_", " ").replace("-", " ").title()
-        return self._build(chunks, SourceType.PDF, path, auto_title)
+        return self._build(sections, SourceType.PDF, path, auto_title)
 
     def from_video(self, source: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.video_parser import VideoParser
 
-        chunks = VideoParser().parse(source)
+        sections = VideoParser().parse_sections(source)
         auto_title = title or self._title_from_source(source)
-        return self._build(chunks, SourceType.VIDEO, source, auto_title)
+        return self._build(sections, SourceType.VIDEO, source, auto_title)
 
     def from_web(self, url: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.web_parser import WebParser
 
-        chunks = WebParser().parse(url)
-        auto_title = title or (
-            chunks[0].metadata.get("title", "Web Content") if chunks else "Web Content"
-        )
-        return self._build(chunks, SourceType.WEBPAGE, url, auto_title)
+        sections = WebParser().parse_sections(url)
+        first_chunk_title = ""
+        if sections and sections[0].chunks:
+            first_chunk_title = sections[0].chunks[0].metadata.get("title", "")
+        auto_title = title or first_chunk_title or "Web Content"
+        return self._build(sections, SourceType.WEBPAGE, url, auto_title)
 
     def from_text(self, source: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.text_parser import TextParser
 
-        chunks = TextParser().parse(source)
+        sections = TextParser().parse_sections(source)
         p = Path(source)
         auto_title = title or (
             p.stem.replace("_", " ").replace("-", " ").title() if p.exists() else "Text Content"
         )
-        return self._build(chunks, SourceType.TEXT, source, auto_title)
+        return self._build(sections, SourceType.TEXT, source, auto_title)
 
     def from_audio(self, path: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.audio_parser import AudioParser
 
-        chunks = AudioParser().parse(path)
+        sections = AudioParser().parse_sections(path)
         auto_title = title or Path(path).stem.replace("_", " ").replace("-", " ").title()
-        return self._build(chunks, SourceType.AUDIO, path, auto_title)
+        return self._build(sections, SourceType.AUDIO, path, auto_title)
 
     def from_repo(self, source: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.repo_parser import RepoParser
 
         parser = RepoParser()
-        chunks = parser.parse(source)
+        sections = parser.parse_sections(source)
         auto_title = title or parser.stats.get("repo_label", self._title_from_source(source))
-        pack = self._build(chunks, SourceType.REPO, source, auto_title)
+        pack = self._build(sections, SourceType.REPO, source, auto_title)
         pack.metadata.update(parser.stats)
         return pack
 
@@ -139,14 +152,15 @@ class Engine:
 
         image_filename = f"{slug}-concept-map.png"
         image_path = out / image_filename
-        image_result = None
-        if format in ("study", "all"):
-            image_result = self.visual_gen.generate(
-                pack.title,
-                pack.key_concepts,
-                pack.chunks,
-                output_path=str(image_path),
-            )
+        # v0.3 fix: generate once for all formats. Previously format="skill"
+        # accidentally invoked visual_gen twice (first call's result was
+        # discarded by the surrounding control flow).
+        image_result = self.visual_gen.generate(
+            pack.title,
+            pack.key_concepts,
+            pack.chunks,
+            output_path=str(image_path),
+        )
 
         if format in ("study", "all"):
             yaml_path = out / f"{slug}.yaml"
@@ -169,13 +183,6 @@ class Engine:
             )
 
         if format in ("skill", "all"):
-            if format == "skill":
-                image_result = self.visual_gen.generate(
-                    pack.title,
-                    pack.key_concepts,
-                    pack.chunks,
-                    output_path=str(image_path),
-                )
             concept_map_src = image_path if image_result else None
             self.skill_exporter.export(pack, out, concept_map_src=concept_map_src)
 
@@ -270,12 +277,12 @@ class Engine:
 
     def _build(
         self,
-        chunks: list,
+        sections: list,
         source_type: SourceType,
         source_ref: str,
         title: str,
     ) -> SkillPack:
-        if not chunks:
+        if not sections:
             return SkillPack(
                 title=title,
                 source_type=source_type,
@@ -283,12 +290,40 @@ class Engine:
                 summary="No content could be extracted.",
             )
 
-        log.info("Extracted %d knowledge chunks from %s", len(chunks), source_ref)
+        # Build cache dir under the eventual output directory. We don't have
+        # output_dir at this point (set later in write()), so cache lives
+        # alongside source-ref-derived slug in a tmp default and is moved
+        # into output/.skill-anything/<slug>/ on write. For now, scope by
+        # title slug under ./output (matches default --output).
+        slug = slugify(title)
+        cache_root: Path | None = None
+        if self.cache_enabled:
+            cache_root = Path("./output") / ".skill-anything" / slug
 
-        knowledge = self.knowledge_gen.generate(chunks)
-        quiz_questions = self.quiz_gen.generate(chunks)
-        flashcards = self.flashcard_gen.generate(chunks)
-        exercises = self.practice_gen.generate(chunks)
+        knowledge_gen = KnowledgeGenerator(
+            cache_dir=cache_root, concurrency=self.concurrency,
+        )
+        quiz_gen = QuizGenerator(
+            cache_dir=cache_root, concurrency=self.concurrency,
+        )
+        flashcard_gen = FlashcardGenerator(
+            cache_dir=cache_root, concurrency=self.concurrency,
+        )
+        practice_gen = PracticeGenerator(
+            cache_dir=cache_root, concurrency=self.concurrency,
+        )
+
+        # Flatten for back-compat tools that walk chunks directly.
+        chunks = [c for s in sections for c in s.chunks]
+        log.info(
+            "Extracted %d sections (%d chunks) from %s",
+            len(sections), len(chunks), source_ref,
+        )
+
+        knowledge = knowledge_gen.generate(sections)
+        quiz_questions = quiz_gen.generate(sections)
+        flashcards = flashcard_gen.generate(sections)
+        exercises = practice_gen.generate(sections)
 
         return SkillPack(
             title=title,
@@ -307,6 +342,7 @@ class Engine:
             practice_exercises=exercises,
             chunks=chunks,
             metadata={
+                "total_sections": len(sections),
                 "total_chunks": len(chunks),
                 "total_questions": len(quiz_questions),
                 "total_flashcards": len(flashcards),

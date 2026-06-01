@@ -12,16 +12,19 @@ import logging
 import re
 from pathlib import Path
 
-from skill_anything.models import KnowledgeChunk, SourceType
+from skill_anything.models import KnowledgeChunk, Section, SourceType
 from skill_anything.parsers.base import BaseParser
 
 log = logging.getLogger(__name__)
+
+# Default: 5-minute sections for long talks/lectures. Tune via env if needed.
+SECTION_DURATION_SECONDS = 300
 
 
 class VideoParser(BaseParser):
     source_type = SourceType.VIDEO
 
-    def parse(self, source: str) -> list[KnowledgeChunk]:
+    def parse_sections(self, source: str) -> list[Section]:
         if self._is_youtube_url(source):
             segments = self._parse_youtube(source)
         elif self._is_subtitle_file(source):
@@ -29,7 +32,7 @@ class VideoParser(BaseParser):
         else:
             segments = self._parse_local_video(source)
 
-        return self._build_chunks(segments, source)
+        return self._build_sections(segments, source)
 
     @staticmethod
     def _is_youtube_url(source: str) -> bool:
@@ -184,35 +187,86 @@ class VideoParser(BaseParser):
                 i += 1
         return segments
 
-    def _build_chunks(
+    def _build_sections(
         self, segments: list[tuple[str, str]], source: str
-    ) -> list[KnowledgeChunk]:
-        combined = "\n".join(text for _, text in segments)
-        raw_chunks = self._split_into_chunks(combined, max_chars=1500)
+    ) -> list[Section]:
+        """Bucket segments by SECTION_DURATION_SECONDS (default 5 minutes).
 
-        chunks: list[KnowledgeChunk] = []
-        seg_idx = 0
-        char_offset = 0
+        Each section's timestamps stay coherent (start of first segment in the
+        bucket). v0.2 produced a single time-tagged chunk stream with drifting
+        timestamps; v0.3 anchors timestamps per-section so a 2-hour talk
+        produces ~24 ordered sections instead of one undifferentiated blob.
+        """
+        if not segments:
+            return []
 
-        for i, chunk_text in enumerate(raw_chunks):
-            timestamp = segments[min(seg_idx, len(segments) - 1)][0] if segments else "00:00"
+        # Build (start_seconds, text) tuples for bucketing.
+        timed_segments = []
+        for ts, text in segments:
+            timed_segments.append((self._timestamp_to_seconds(ts), ts, text))
 
-            chunks.append(
-                KnowledgeChunk(
-                    content=chunk_text,
-                    section=f"@{timestamp}",
-                    chunk_index=i,
-                    source_time=timestamp,
-                    metadata={"source": source},
+        sections: list[Section] = []
+        chunk_index = 0
+        bucket_start = 0
+        bucket_segments: list[tuple[int, str, str]] = []
+        sec_idx = 0
+
+        def flush_bucket(start_sec: int, segs: list[tuple[int, str, str]]) -> None:
+            nonlocal sec_idx, chunk_index
+            if not segs:
+                return
+            sec_idx += 1
+            section_id = f"sec-{sec_idx:03d}"
+            first_ts = segs[0][1]
+            last_ts = segs[-1][1]
+            title = f"{first_ts}–{last_ts}"
+            body = "\n".join(text for _, _, text in segs)
+            section_chunks: list[KnowledgeChunk] = []
+            for sub in self._split_into_chunks(body, max_chars=1500):
+                section_chunks.append(
+                    KnowledgeChunk(
+                        content=sub,
+                        section=title,
+                        section_id=section_id,
+                        chunk_index=chunk_index,
+                        source_time=first_ts,
+                        metadata={"source": source, "time_range": title},
+                    )
                 )
-            )
+                chunk_index += 1
+            if section_chunks:
+                sections.append(
+                    Section(
+                        id=section_id,
+                        title=title,
+                        chunks=section_chunks,
+                        metadata={
+                            "source": source,
+                            "time_start": first_ts,
+                            "time_end": last_ts,
+                        },
+                    )
+                )
 
-            char_offset += len(chunk_text)
-            while seg_idx < len(segments) - 1:
-                seg_len = len(segments[seg_idx][1]) + 1
-                if seg_len > char_offset:
-                    break
-                char_offset -= seg_len
-                seg_idx += 1
+        for sec, ts, text in timed_segments:
+            if sec - bucket_start >= SECTION_DURATION_SECONDS and bucket_segments:
+                flush_bucket(bucket_start, bucket_segments)
+                bucket_start = sec
+                bucket_segments = []
+            bucket_segments.append((sec, ts, text))
 
-        return chunks
+        flush_bucket(bucket_start, bucket_segments)
+        return sections
+
+    @staticmethod
+    def _timestamp_to_seconds(ts: str) -> int:
+        """Convert mm:ss or hh:mm:ss to seconds."""
+        parts = ts.split(":")
+        try:
+            if len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+            if len(parts) == 3:
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        except ValueError:
+            return 0
+        return 0

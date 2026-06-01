@@ -16,6 +16,7 @@ from skill_anything.models import (
     PracticeExercise,
     QuestionType,
     QuizQuestion,
+    Section,
     SkillPack,
     SourceType,
 )
@@ -27,8 +28,29 @@ class SkillParser(BaseParser):
 
     source_type = SourceType.SKILL
 
+    def parse_sections(self, source: str) -> list[Section]:
+        return self._chunks_to_single_section(self.parse_pack(source).chunks)
+
     def parse(self, source: str) -> list[KnowledgeChunk]:
         return self.parse_pack(source).chunks
+
+    @staticmethod
+    def _chunks_to_single_section(chunks: list[KnowledgeChunk]) -> list[Section]:
+        if not chunks:
+            return []
+        # Each rebuilt KnowledgeChunk already carries its origin section name,
+        # so we group by that to preserve the SKILL.md structure.
+        from collections import OrderedDict
+        groups: OrderedDict[str, list[KnowledgeChunk]] = OrderedDict()
+        for c in chunks:
+            groups.setdefault(c.section or "Skill", []).append(c)
+        sections: list[Section] = []
+        for i, (name, group) in enumerate(groups.items(), 1):
+            section_id = f"sec-{i:03d}"
+            for c in group:
+                c.section_id = section_id
+            sections.append(Section(id=section_id, title=name, chunks=group))
+        return sections
 
     def parse_pack(self, source: str) -> SkillPack:
         skill_root = self.resolve_skill_root(source)

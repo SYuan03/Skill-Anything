@@ -1,8 +1,9 @@
-"""Practice exercise generator — create hands-on exercises from knowledge chunks.
+"""Practice exercise generator — section-aware, quota-balanced (v0.3).
 
-Unlike quiz questions (which test recall), exercises ask the learner to
-*apply* knowledge: design something, analyze a case, solve a problem,
-write/code something, or make a decision.
+v0.2 concatenated *all* chunks into a single 10k-char-truncated prompt and
+asked for len(chunks) exercises in one shot — guaranteed to fail on long
+sources both because input was truncated and because output would exceed
+max_tokens. v0.3 generates 1-2 exercises per section concurrently.
 """
 
 from __future__ import annotations
@@ -10,32 +11,35 @@ from __future__ import annotations
 import json
 import logging
 import re
+from pathlib import Path
 
-from skill_anything.models import Difficulty, KnowledgeChunk, PracticeExercise
+from skill_anything.generators._budget import allocate_quota
+from skill_anything.generators._concurrent import LLMCache, cache_key, map_llm, resolve_fast_model
+from skill_anything.models import Difficulty, KnowledgeChunk, PracticeExercise, Section
 
 log = logging.getLogger(__name__)
 
-_EXERCISE_PROMPT = """\
-You are an expert course designer. Create {count} high-quality hands-on \
-exercises based on the content below.
+PRACTICE_PROMPT_VERSION = "v0.3"
 
-**These are NOT quiz questions.** They are tasks that require the learner to \
-actively apply, build, or analyze something.
+_EXERCISE_PROMPT = """\
+You are an expert course designer. Create {count} hands-on exercises based on the section below \
+(titled "{section_title}"). These are NOT quiz questions — they are tasks that ask the learner \
+to actively apply, build, or analyse something.
 
 **Exercise types:**
 - **analysis**: Given a case/dataset/situation, analyze and draw conclusions
 - **design**: Design a system, architecture, workflow, or solution
 - **implementation**: Build, code, or construct something concrete
-- **critique**: Evaluate an existing approach — identify strengths, weaknesses, improvements
+- **critique**: Evaluate an existing approach — strengths, weaknesses, improvements
 - **research**: Investigate a topic and synthesize findings
 
 **Requirements:**
 - Each exercise has a clear, detailed description with specific deliverables
-- Include 1-3 helpful hints to get started
+- Include 1-3 helpful hints
 - Provide a reference solution or key solution points
-- Distribute difficulty across easy/medium/hard
+- Vary difficulty across easy/medium/hard
 
-Content:
+Section content:
 {content}
 
 Output ONLY a valid JSON array:
@@ -43,108 +47,172 @@ Output ONLY a valid JSON array:
 [
   {{
     "title": "Exercise title",
-    "description": "Detailed task description including context, requirements, and expected output",
+    "description": "Detailed task description",
     "type": "analysis|design|implementation|critique|research",
     "difficulty": "easy|medium|hard",
     "hints": ["Hint 1: ...", "Hint 2: ..."],
-    "solution": "Reference solution or key points of the answer"
+    "solution": "Reference solution or key points"
   }}
 ]
 """
 
 
 class PracticeGenerator:
-    """Generate hands-on practice exercises from knowledge chunks."""
+    """Generate practice exercises per section with a balanced global quota."""
+
+    def __init__(
+        self,
+        *,
+        cache_dir: Path | None = None,
+        concurrency: int = 4,
+        fast_model: str | None = None,
+    ) -> None:
+        self.cache_dir = cache_dir
+        self.concurrency = concurrency
+        self.fast_model = fast_model
 
     def generate(
         self,
-        chunks: list[KnowledgeChunk],
+        sections_or_chunks: list,
         *,
-        count_per_chunk: int = 1,
-        max_exercises: int = 10,
+        total: int = 10,
+        count_per_chunk: int | None = None,
+        max_exercises: int | None = None,
     ) -> list[PracticeExercise]:
+        if max_exercises is not None:
+            total = max_exercises
+        elif count_per_chunk is not None:
+            n = len(sections_or_chunks) if sections_or_chunks else 1
+            total = min(count_per_chunk * n, 15)
+
+        sections = self._coerce_sections(sections_or_chunks)
+        if not sections:
+            return []
+
         try:
-            from skill_anything.llm import chat, is_available
-
+            from skill_anything.llm import is_available
             if not is_available():
-                return self._generate_offline(chunks, max_exercises)
+                return self._generate_offline(
+                    [c for s in sections for c in s.chunks], total,
+                )
         except ImportError:
-            return self._generate_offline(chunks, max_exercises)
+            return self._generate_offline(
+                [c for s in sections for c in s.chunks], total,
+            )
 
-        combined = "\n\n---\n\n".join(c.content for c in chunks)
-        if len(combined) > 10000:
-            combined = combined[:10000] + "\n\n[... truncated ...]"
+        quotas = allocate_quota(sections, total, min_per_section=1)
+        return self._generate_with_llm(sections, quotas)
 
-        total = min(len(chunks) * count_per_chunk, max_exercises)
-        prompt = _EXERCISE_PROMPT.format(count=total, content=combined)
+    def _generate_with_llm(
+        self, sections: list[Section], quotas: dict[str, int],
+    ) -> list[PracticeExercise]:
+        from skill_anything.llm import chat
 
-        raw = chat(
-            [{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=4096,
+        fast_model = resolve_fast_model(self.fast_model)
+        cache = LLMCache(self.cache_dir / "practice" if self.cache_dir else None)
+        targets = [s for s in sections if quotas.get(s.id, 0) > 0]
+
+        def per_section(section: Section) -> list[dict] | None:
+            n = quotas.get(section.id, 0)
+            prompt = _EXERCISE_PROMPT.format(
+                count=n,
+                section_title=section.title,
+                content=section.content[:5000],
+            )
+            raw = chat(
+                [{"role": "user", "content": prompt}],
+                temperature=0.4,
+                max_tokens=2560,
+            )
+            if raw is None:
+                return None
+            return self._parse_response_raw(raw)
+
+        results = map_llm(
+            targets,
+            per_section,
+            concurrency=self.concurrency,
+            cache=cache,
+            key_fn=lambda s: cache_key(
+                _EXERCISE_PROMPT.format(
+                    count=quotas.get(s.id, 0),
+                    section_title=s.title,
+                    content=s.content[:5000],
+                ),
+                fast_model,
+                PRACTICE_PROMPT_VERSION,
+            ),
+            label=f"Exercises [{fast_model}]",
         )
 
-        if raw is None:
-            return self._generate_offline(chunks, max_exercises)
-
-        return self._parse_response(raw)[:max_exercises]
+        exercises: list[PracticeExercise] = []
+        for _, items in zip(targets, results):
+            if not items:
+                continue
+            for item in items:
+                ex = self._item_to_exercise(item)
+                if ex is not None:
+                    exercises.append(ex)
+        return exercises
 
     @staticmethod
-    def _parse_response(raw: str) -> list[PracticeExercise]:
+    def _coerce_sections(items: list) -> list[Section]:
+        from skill_anything.generators.knowledge_gen import KnowledgeGenerator
+        return KnowledgeGenerator._coerce_sections(items)
+
+    @staticmethod
+    def _parse_response_raw(raw: str) -> list[dict]:
         raw = raw.strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)
             raw = re.sub(r"\n?```$", "", raw)
-
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
             match = re.search(r"\[.*\]", raw, re.DOTALL)
-            if match:
-                try:
-                    data = json.loads(match.group())
-                except json.JSONDecodeError:
-                    return []
-            else:
+            if not match:
                 return []
-
-        if not isinstance(data, list):
-            return []
-
-        exercises: list[PracticeExercise] = []
-        for item in data:
-            if not isinstance(item, dict) or not item.get("title"):
-                continue
-
-            diff = item.get("difficulty", "medium")
             try:
-                difficulty = Difficulty(diff)
-            except ValueError:
-                difficulty = Difficulty.MEDIUM
+                data = json.loads(match.group())
+            except json.JSONDecodeError:
+                return []
+        return data if isinstance(data, list) else []
 
-            exercises.append(
-                PracticeExercise(
-                    title=item["title"],
-                    description=item.get("description", ""),
-                    difficulty=difficulty,
-                    hints=item.get("hints", []),
-                    solution=item.get("solution", ""),
-                    exercise_type=item.get("type", "open_ended"),
-                )
-            )
+    @staticmethod
+    def _item_to_exercise(item: dict) -> PracticeExercise | None:
+        if not isinstance(item, dict) or not item.get("title"):
+            return None
+        try:
+            difficulty = Difficulty(item.get("difficulty", "medium"))
+        except ValueError:
+            difficulty = Difficulty.MEDIUM
+        return PracticeExercise(
+            title=item["title"],
+            description=item.get("description", ""),
+            difficulty=difficulty,
+            hints=item.get("hints", []),
+            solution=item.get("solution", ""),
+            exercise_type=item.get("type", "open_ended"),
+        )
 
-        return exercises
+    @staticmethod
+    def _parse_response(raw: str) -> list[PracticeExercise]:
+        items = PracticeGenerator._parse_response_raw(raw)
+        out: list[PracticeExercise] = []
+        for item in items:
+            ex = PracticeGenerator._item_to_exercise(item)
+            if ex is not None:
+                out.append(ex)
+        return out
 
     @staticmethod
     def _generate_offline(
         chunks: list[KnowledgeChunk], max_exercises: int
     ) -> list[PracticeExercise]:
         exercises: list[PracticeExercise] = []
-
         for chunk in chunks:
             if len(exercises) >= max_exercises:
                 break
-
             section = chunk.section or f"Section {chunk.chunk_index + 1}"
             exercises.append(
                 PracticeExercise(
@@ -162,5 +230,4 @@ class PracticeGenerator:
                     exercise_type="analysis",
                 )
             )
-
         return exercises

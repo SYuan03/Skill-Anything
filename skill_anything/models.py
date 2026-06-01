@@ -51,11 +51,36 @@ class KnowledgeChunk:
     chunk_index: int = 0
     source_page: int | None = None
     source_time: str | None = None
+    section_id: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __str__(self) -> str:
         label = self.section or f"chunk-{self.chunk_index}"
         return f"[{label}] {self.content[:80]}..."
+
+
+@dataclass
+class Section:
+    """A coherent unit of source content (chapter, file, video segment, page range).
+
+    Sections are the unit Skill-Anything's map-reduce pipeline operates on: each
+    section produces its own per-section LLM outputs (notes, partial concepts,
+    quotas of quiz/flashcards/exercises), and a final reduce step combines them.
+    """
+
+    id: str
+    title: str
+    chunks: list[KnowledgeChunk] = field(default_factory=list)
+    parent_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def total_chars(self) -> int:
+        return sum(len(c.content) for c in self.chunks)
+
+    @property
+    def content(self) -> str:
+        return "\n\n".join(c.content for c in self.chunks)
 
 
 @dataclass

@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="#whats-new-in-v03">v0.3</a> •
   <a href="#whats-new-in-v02">v0.2</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#demo">Demo</a> •
@@ -26,6 +27,62 @@
   <a href="#python-api">API</a> •
   <a href="#faq">FAQ</a>
 </p>
+
+---
+
+## What's New in v0.3
+
+**v0.3 makes Skill-Anything actually usable on long sources — books, multi-hour talks, large repos.**
+
+v0.1 and v0.2 silently degraded on anything past ~15K characters: the knowledge generator truncated input, quiz/flashcard generation hit hard per-call caps before reaching later chapters, and every LLM call was sequential with no caching. v0.3 introduces a **section-aware, map-reduce pipeline** with concurrency and a disk cache, so a 12-chapter book produces a study pack that actually covers every chapter.
+
+- **Section-aware parsing** across every source type (PDF uses the embedded outline; text/web split by headings; video/audio bucket transcripts into 5-min sections; repos produce one Section per file)
+- **Map-reduce knowledge generation** — per-section map calls produce local summary/concepts/notes; a single reduce call synthesizes the global summary, cheat sheet, takeaways, and learning path. `detailed_notes` is assembled deterministically with no truncation.
+- **Per-section quota allocation** for quiz/flashcards/exercises — largest-remainder weighting by section size with a guaranteed minimum per section, so **every chapter gets coverage** even on a small total budget
+- **Concurrent LLM execution + disk cache** — `ThreadPoolExecutor` map runner with rich progress bars, per-section failure isolation, and a `sha256(prompt+model+version)` cache so second runs of the same source skip every cached call
+- **Two-tier model routing** — `SKILL_ANYTHING_MODEL_FAST` for map calls, `SKILL_ANYTHING_MODEL_SMART` for reduce
+- **New CLI flags** — `--concurrency / -c` (default 6) and `--no-cache` on every source command
+
+```bash
+sa pdf book.pdf --format all --concurrency 8        # long PDF, parallel map
+sa pdf book.pdf --format all --concurrency 8        # second run: cache hits, finishes in seconds
+sa text long-notes.md --no-cache                    # bypass cache for a clean run
+```
+
+### v0.3 Case Study
+
+A 12-chapter distributed-systems primer processed end-to-end with `--concurrency 6` (`sa text dist-systems-book.md --format all`):
+
+| Output | Count |
+|:-------|:------|
+| Outline entries | 13 |
+| Key concepts | 15 |
+| Glossary terms | 62 |
+| Quiz questions | 30 |
+| Flashcards | 40 |
+| Exercises | 10 |
+| Takeaways | 10 |
+
+Chapter coverage verified by keyword matching across the generated quiz / flashcards / exercises:
+
+| Chapter | Quiz | Flash | Exer |
+|:--------|-----:|------:|-----:|
+| 1. Define a distributed system | 6 | 11 | 1 |
+| 2. The Eight Fallacies | 3 | 4 | 1 |
+| 3. Consistency Models | 9 | 8 | 3 |
+| 4. CAP and PACELC | 3 | 3 | 1 |
+| 5. Consensus | 2 | 3 | 1 |
+| 6. Replication | 4 | 5 | 3 |
+| 7. Partitioning | 2 | 2 | 2 |
+| 8. CRDTs | 1 | 0 | 0 |
+| 9. Failure detection | 4 | 6 | 0 |
+| 10. Time & clocks | 4 | 5 | 2 |
+| 11. Messaging semantics | 1 | 0 | 0 |
+| 12. Observability | 1 | 1 | 1 |
+
+**Every chapter (1–12) is represented**, including narrower topics like CRDTs and messaging semantics that v0.2 routinely dropped once the per-call cap was hit at chapter 2.
+
+> If v0.2 was "any source -> study pack -> reusable skill toolchain", v0.3 is "any source, **including long ones**, with caching and concurrency built in".
 
 ---
 
@@ -578,6 +635,8 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `--difficulty` | `-d` | `quiz` | Filter by difficulty: `easy`, `medium`, `hard` |
 | `--no-shuffle` | — | `quiz`, `review` | Keep original order instead of randomizing |
 | `--json` | `-j` | `info` | Output as JSON |
+| `--concurrency` | `-c` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Parallel LLM calls for per-section map (default 6) |
+| `--no-cache` | — | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Bypass the on-disk LLM call cache |
 
 ---
 
@@ -637,6 +696,8 @@ All configuration is done through environment variables (set in `.env` or your s
 | `SKILL_ANYTHING_API_KEY` | LLM API key. Falls back to `OPENAI_API_KEY` | — |
 | `SKILL_ANYTHING_API_BASE` | Chat completions base URL. Falls back to `OPENAI_API_BASE` | — |
 | `SKILL_ANYTHING_MODEL` | Chat model name | `gpt-4o` |
+| `SKILL_ANYTHING_MODEL_FAST` | (v0.3) Fast/cheap tier for per-section map calls. Falls back to `SKILL_ANYTHING_MODEL` | — |
+| `SKILL_ANYTHING_MODEL_SMART` | (v0.3) Stronger tier for global reduce call. Falls back to `SKILL_ANYTHING_MODEL` | — |
 | `SKILL_ANYTHING_IMAGE_API_BASE` | Image generation base URL. Falls back to `SKILL_ANYTHING_API_BASE` | — |
 | `SKILL_ANYTHING_IMAGE_MODEL` | Image model name | `dall-e-3` |
 | `SKILL_ANYTHING_PROXY` | HTTP proxy for API requests. Falls back to `HTTPS_PROXY` / `HTTP_PROXY` | — |
@@ -742,6 +803,21 @@ v0.2 adds a lightweight skill toolchain on top of the existing study-pack workfl
 - `sa repo` for local and public GitHub repositories
 - `sa import-skill` for importing existing `SKILL.md` packages back into YAML/study format
 - `sa lint` for validating skill packages before sharing or re-exporting them
+
+</details>
+
+<details><summary><b>What changed in v0.3?</b></summary>
+
+v0.3 makes Skill-Anything work on **long sources** — books, multi-hour talks, large repos:
+
+- Section-aware parsing (PDF outline, heading-split text/web, time-bucketed video/audio)
+- Map-reduce knowledge generation — per-section map + global reduce, no more 15K-char truncation
+- Per-section quota for quiz / flashcards / exercises — every chapter gets coverage
+- Concurrent LLM execution (`--concurrency`) with a disk cache (`./output/.skill-anything/`)
+- Two-tier model routing via `SKILL_ANYTHING_MODEL_FAST` / `SKILL_ANYTHING_MODEL_SMART`
+- Bypass the cache with `--no-cache` for clean runs
+
+See [`RELEASE_NOTES_v0.3.md`](RELEASE_NOTES_v0.3.md) for details and a case study.
 
 </details>
 

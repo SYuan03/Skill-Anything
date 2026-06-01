@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from skill_anything.models import KnowledgeChunk, SourceType
+from skill_anything.models import KnowledgeChunk, Section, SourceType
 from skill_anything.parsers.base import BaseParser
 
 log = logging.getLogger(__name__)
@@ -14,13 +14,13 @@ log = logging.getLogger(__name__)
 class WebParser(BaseParser):
     source_type = SourceType.WEBPAGE
 
-    def parse(self, source: str) -> list[KnowledgeChunk]:
+    def parse_sections(self, source: str) -> list[Section]:
         if not source.startswith(("http://", "https://")):
             raise ValueError(f"Expected a URL, got: {source}")
 
         html = self._fetch(source)
         title, text = self._extract_content(html)
-        return self._build_chunks(text, title, source)
+        return self._build_sections(text, title, source)
 
     @staticmethod
     def _fetch(url: str) -> str:
@@ -86,17 +86,44 @@ class WebParser(BaseParser):
         lines = [line.strip() for line in html.splitlines() if len(line.strip()) > 20]
         return title, "\n\n".join(lines)
 
-    def _build_chunks(
+    def _build_sections(
         self, text: str, title: str, source: str
-    ) -> list[KnowledgeChunk]:
-        raw_chunks = self._split_into_chunks(text)
+    ) -> list[Section]:
+        # The bs4 extractor already inserts "## heading" lines for h1..h4 tags.
+        # Use the same heading-split logic as TextParser so long web pages
+        # produce multiple sections instead of one giant blob.
+        from skill_anything.parsers.text_parser import TextParser
 
-        return [
-            KnowledgeChunk(
-                content=chunk,
-                section=title,
-                chunk_index=i,
-                metadata={"source": source, "title": title},
-            )
-            for i, chunk in enumerate(raw_chunks)
-        ]
+        heading_sections = TextParser._split_by_headings(text)
+        if not heading_sections or all(not h for h, _ in heading_sections):
+            heading_sections = [(title or "Web Content", text)]
+
+        sections: list[Section] = []
+        chunk_idx = 0
+        for sec_idx, (heading, body) in enumerate(heading_sections):
+            if not body.strip():
+                continue
+            section_id = f"sec-{sec_idx + 1:03d}"
+            section_title = heading or title or f"Section {sec_idx + 1}"
+            section_chunks: list[KnowledgeChunk] = []
+            for sub in self._split_into_chunks(body, max_chars=2000):
+                section_chunks.append(
+                    KnowledgeChunk(
+                        content=sub,
+                        section=section_title,
+                        section_id=section_id,
+                        chunk_index=chunk_idx,
+                        metadata={"source": source, "title": title},
+                    )
+                )
+                chunk_idx += 1
+            if section_chunks:
+                sections.append(
+                    Section(
+                        id=section_id,
+                        title=section_title,
+                        chunks=section_chunks,
+                        metadata={"source": source, "title": title},
+                    )
+                )
+        return sections
