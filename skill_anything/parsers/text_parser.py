@@ -11,6 +11,7 @@ from skill_anything.parsers.base import BaseParser
 
 class TextParser(BaseParser):
     source_type = SourceType.TEXT
+    _FILE_SUFFIXES = {".md", ".markdown", ".txt", ".text", ".rst"}
 
     def parse_sections(self, source: str) -> list[Section]:
         # Inline text strings (esp. multi-line) can exceed OS path-length
@@ -23,6 +24,8 @@ class TextParser(BaseParser):
             text = path.read_text(encoding="utf-8")
             ref = str(path)
         else:
+            if path is not None and path.suffix.lower() in self._FILE_SUFFIXES:
+                raise FileNotFoundError(f"Text source file not found: {source}")
             text = source
             ref = "<inline>"
 

@@ -11,6 +11,7 @@ from skill_anything.models import (
     QuestionType,
     QuizQuestion,
     SkillPack,
+    SourceCitation,
     SourceType,
     TimelineEntry,
 )
@@ -44,6 +45,18 @@ def sample_chunks() -> list[KnowledgeChunk]:
 
 @pytest.fixture
 def sample_pack() -> SkillPack:
+    chapter_one = SourceCitation(
+        section="Chapter 1",
+        locator="p.1",
+        excerpt="Supervised learning uses labeled training data",
+        chunk_index=0,
+    )
+    chapter_two = SourceCitation(
+        section="Chapter 2",
+        locator="p.5",
+        excerpt="Convolutional Neural Networks (CNNs) are particularly suited for image processing tasks",
+        chunk_index=1,
+    )
     return SkillPack(
         title="Machine Learning Basics",
         source_type=SourceType.TEXT,
@@ -68,6 +81,7 @@ def sample_pack() -> SkillPack:
             "next_steps": ["NLP", "Computer Vision"],
             "resources": ["Deep Learning Book by Goodfellow"],
         },
+        citations=[chapter_one, chapter_two],
         quiz_questions=[
             QuizQuestion(
                 question="What is supervised learning?",
@@ -77,18 +91,32 @@ def sample_pack() -> SkillPack:
                 explanation="Supervised learning uses labeled data.",
                 difficulty=Difficulty.EASY,
                 question_type=QuestionType.MULTIPLE_CHOICE,
+                citation=chapter_one,
             ),
             QuizQuestion(
                 question="You have 10k unlabeled images. What approach would you use?",
-                answer="Unsupervised learning (clustering) or self-supervised pre-training.",
+                options=[
+                    "A. Unsupervised learning",
+                    "B. Ordinary supervised learning",
+                    "C. Manual sorting only",
+                    "D. No learning method",
+                ],
+                answer="A. Unsupervised learning",
                 explanation="Without labels, supervised learning is not directly possible.",
                 difficulty=Difficulty.HARD,
                 question_type=QuestionType.SCENARIO,
+                citation=chapter_one,
             ),
         ],
         flashcards=[
-            Flashcard(front="What is ML?", back="A branch of AI.", tags=["ML"]),
-            Flashcard(front="What is CNN?", back="Convolutional Neural Network.", tags=["DL"]),
+            Flashcard(
+                front="What is ML?", back="A branch of AI.", tags=["ML"],
+                citation=chapter_one,
+            ),
+            Flashcard(
+                front="What is CNN?", back="Convolutional Neural Network.", tags=["DL"],
+                citation=chapter_two,
+            ),
         ],
         practice_exercises=[
             PracticeExercise(
@@ -98,6 +126,7 @@ def sample_pack() -> SkillPack:
                 hints=["Use sklearn", "Split data 80/20"],
                 solution="from sklearn.linear_model import LogisticRegression...",
                 exercise_type="implementation",
+                citation=chapter_one,
             ),
         ],
     )

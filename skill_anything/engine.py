@@ -25,6 +25,7 @@ from skill_anything.models import (
     QuestionType,
     QuizQuestion,
     SkillPack,
+    SourceCitation,
     SourceType,
     TimelineEntry,
     slugify,
@@ -97,7 +98,8 @@ class Engine:
             if p is not None and p.exists()
             else "Text Content"
         )
-        return self._build(sections, SourceType.TEXT, source, auto_title)
+        source_ref = str(p) if p is not None and p.exists() else "<inline>"
+        return self._build(sections, SourceType.TEXT, source_ref, auto_title)
 
     def from_audio(self, path: str, *, title: str | None = None) -> SkillPack:
         from skill_anything.parsers.audio_parser import AudioParser
@@ -273,6 +275,11 @@ class Engine:
             cheat_sheet=data.get("cheat_sheet", ""),
             takeaways=data.get("takeaways", []),
             learning_path=data.get("learning_path", {}),
+            citations=[
+                Engine._citation_from_dict(citation)
+                for citation in data.get("citations", [])
+                if isinstance(citation, dict)
+            ],
             quiz_questions=[
                 QuizQuestion(
                     question=q["question"],
@@ -281,11 +288,15 @@ class Engine:
                     explanation=q.get("explanation", ""),
                     difficulty=Difficulty(q.get("difficulty", "medium")),
                     question_type=QuestionType(q.get("type", "multiple_choice")),
+                    citation=Engine._citation_from_dict(q.get("source")),
                 )
                 for q in data.get("quiz_questions", [])
             ],
             flashcards=[
-                Flashcard(front=c["front"], back=c["back"], tags=c.get("tags", []))
+                Flashcard(
+                    front=c["front"], back=c["back"], tags=c.get("tags", []),
+                    citation=Engine._citation_from_dict(c.get("source")),
+                )
                 for c in data.get("flashcards", [])
             ],
             practice_exercises=[
@@ -296,6 +307,7 @@ class Engine:
                     hints=e.get("hints", []),
                     solution=e.get("solution", ""),
                     exercise_type=e.get("type", "open_ended"),
+                    citation=Engine._citation_from_dict(e.get("source")),
                 )
                 for e in data.get("practice_exercises", [])
             ],
@@ -364,6 +376,7 @@ class Engine:
             cheat_sheet=knowledge.cheat_sheet,
             takeaways=knowledge.takeaways,
             learning_path=knowledge.learning_path,
+            citations=knowledge.citations,
             quiz_questions=quiz_questions,
             flashcards=flashcards,
             practice_exercises=exercises,
@@ -376,7 +389,33 @@ class Engine:
                 "total_exercises": len(exercises),
                 "total_glossary": len(knowledge.glossary),
                 "generation_budget": budgets,
+                "grounding": {
+                    "knowledge_evidence": len(knowledge.citations),
+                    "interactive_items": len(quiz_questions) + len(flashcards) + len(exercises),
+                    "cited_interactive_items": sum(
+                        item.citation is not None
+                        for item in [*quiz_questions, *flashcards, *exercises]
+                    ),
+                },
+                "generation": {
+                    "knowledge": knowledge_gen.diagnostics,
+                    "quiz": quiz_gen.diagnostics,
+                    "flashcards": flashcard_gen.diagnostics,
+                    "exercises": practice_gen.diagnostics,
+                },
             },
+        )
+
+    @staticmethod
+    def _citation_from_dict(data: object) -> SourceCitation | None:
+        if not isinstance(data, dict) or not data.get("section") or not data.get("excerpt"):
+            return None
+        chunk_index = data.get("chunk_index")
+        return SourceCitation(
+            section=str(data["section"]),
+            locator=str(data.get("locator", "")),
+            excerpt=str(data["excerpt"]),
+            chunk_index=chunk_index if isinstance(chunk_index, int) else None,
         )
 
     @staticmethod
@@ -511,6 +550,10 @@ class Engine:
                 lines.extend(["<details><summary>Answer</summary>", "", f"**{q.answer}**", ""])
                 if q.explanation:
                     lines.extend([f"_{q.explanation}_", ""])
+                if q.citation:
+                    lines.extend(
+                        [f'> Source ({q.citation.label}): “{q.citation.excerpt}”', ""]
+                    )
                 lines.extend(["</details>", ""])
             lines.extend(["---", ""])
 
@@ -518,7 +561,12 @@ class Engine:
             lines.extend(["## Flashcards", ""])
             for i, card in enumerate(pack.flashcards, 1):
                 tags = " ".join(f"`{tag}`" for tag in card.tags) if card.tags else ""
-                lines.extend([f"**{i}. {card.front}** {tags}", f"> {card.back}", ""])
+                lines.extend([f"**{i}. {card.front}** {tags}", f"> {card.back}"])
+                if card.citation:
+                    lines.append(
+                        f'> Source ({card.citation.label}): “{card.citation.excerpt}”'
+                    )
+                lines.append("")
             lines.extend(["---", ""])
 
         if pack.practice_exercises:
@@ -549,6 +597,14 @@ class Engine:
                             exercise.solution,
                             "",
                             "</details>",
+                            "",
+                        ]
+                    )
+                if exercise.citation:
+                    lines.extend(
+                        [
+                            f'> Source ({exercise.citation.label}): '
+                            f'“{exercise.citation.excerpt}”',
                             "",
                         ]
                     )

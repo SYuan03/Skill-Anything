@@ -110,6 +110,28 @@ class TimelineEntry:
         return {"position": self.position, "title": self.title, "summary": self.summary}
 
 
+@dataclass(frozen=True)
+class SourceCitation:
+    """A source quote that was verified during generation."""
+
+    section: str
+    excerpt: str
+    locator: str = ""
+    chunk_index: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {"section": self.section, "excerpt": self.excerpt}
+        if self.locator:
+            data["locator"] = self.locator
+        if self.chunk_index is not None:
+            data["chunk_index"] = self.chunk_index
+        return data
+
+    @property
+    def label(self) -> str:
+        return f"{self.section} · {self.locator}" if self.locator else self.section
+
+
 # ======================================================================
 # Interactive outputs
 # ======================================================================
@@ -126,6 +148,7 @@ class QuizQuestion:
     difficulty: Difficulty = Difficulty.MEDIUM
     question_type: QuestionType = QuestionType.MULTIPLE_CHOICE
     source_chunk: int = 0
+    citation: SourceCitation | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -137,6 +160,8 @@ class QuizQuestion:
         }
         if self.options:
             d["options"] = self.options
+        if self.citation:
+            d["source"] = self.citation.to_dict()
         return d
 
 
@@ -148,9 +173,13 @@ class Flashcard:
     back: str
     tags: list[str] = field(default_factory=list)
     source_chunk: int = 0
+    citation: SourceCitation | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"front": self.front, "back": self.back, "tags": self.tags}
+        data: dict[str, Any] = {"front": self.front, "back": self.back, "tags": self.tags}
+        if self.citation:
+            data["source"] = self.citation.to_dict()
+        return data
 
 
 @dataclass
@@ -163,6 +192,7 @@ class PracticeExercise:
     hints: list[str] = field(default_factory=list)
     solution: str = ""
     exercise_type: str = "open_ended"
+    citation: SourceCitation | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -175,6 +205,8 @@ class PracticeExercise:
             d["hints"] = self.hints
         if self.solution:
             d["solution"] = self.solution
+        if self.citation:
+            d["source"] = self.citation.to_dict()
         return d
 
 
@@ -204,6 +236,7 @@ class SkillPack:
     cheat_sheet: str = ""
     takeaways: list[str] = field(default_factory=list)
     learning_path: dict[str, list[str]] = field(default_factory=dict)
+    citations: list[SourceCitation] = field(default_factory=list)
 
     # --- Interactive ---
     quiz_questions: list[QuizQuestion] = field(default_factory=list)
@@ -227,6 +260,7 @@ class SkillPack:
             "cheat_sheet": self.cheat_sheet,
             "takeaways": self.takeaways,
             "learning_path": self.learning_path,
+            "citations": [citation.to_dict() for citation in self.citations],
             "quiz_questions": [q.to_dict() for q in self.quiz_questions],
             "flashcards": [f.to_dict() for f in self.flashcards],
             "practice_exercises": [e.to_dict() for e in self.practice_exercises],
@@ -243,6 +277,7 @@ class SkillPack:
             "flashcards": len(self.flashcards),
             "exercises": len(self.practice_exercises),
             "takeaways": len(self.takeaways),
+            "citations": len(self.citations),
         }
 
 

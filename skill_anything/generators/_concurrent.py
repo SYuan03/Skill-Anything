@@ -116,13 +116,20 @@ class LLMCache:
         if not self.enabled():
             return
         path = self.dir / f"{key}.json"
+        temp_path = path.with_name(
+            f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
         try:
-            path.write_text(
-                json.dumps({"value": value}, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            payload = json.dumps({"value": value}, ensure_ascii=False, indent=2)
+            with self._lock:
+                temp_path.write_text(payload, encoding="utf-8")
+                os.replace(temp_path, path)
         except Exception as e:
             log.debug("cache put failed for %s: %s", key, e)
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def map_llm(
@@ -185,6 +192,11 @@ def map_llm(
         for attempt in range(max_retries + 1):
             try:
                 value = fn(item)
+                if value is None:
+                    if attempt < max_retries:
+                        time.sleep(min(2**attempt, 8))
+                        continue
+                    return idx, None
                 if cache is not None and key_fn is not None and value is not None:
                     cache.put(key_fn(item), value)
                 return idx, value

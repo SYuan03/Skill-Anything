@@ -95,6 +95,9 @@ def test_engine_import_skill_round_trip(sample_pack, tmp_path: Path):
     assert imported.summary == sample_pack.summary
     assert len(imported.quiz_questions) == len(sample_pack.quiz_questions)
     assert len(imported.flashcards) == len(sample_pack.flashcards)
+    assert imported.quiz_questions[0].citation == sample_pack.quiz_questions[0].citation
+    assert imported.practice_exercises[0].citation is not None
+    assert imported.citations
     assert imported.metadata["skill_name"] == "machine-learning-basics"
 
 

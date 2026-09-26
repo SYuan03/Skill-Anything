@@ -18,6 +18,7 @@ from skill_anything.models import (
     QuizQuestion,
     Section,
     SkillPack,
+    SourceCitation,
     SourceType,
 )
 from skill_anything.parsers.base import BaseParser
@@ -72,6 +73,17 @@ class SkillParser(BaseParser):
         quiz_questions = self._parse_quiz_questions(skill_root / "assets" / "quiz.yaml")
         flashcards = self._parse_flashcards(skill_root / "assets" / "flashcards.yaml")
         exercises = self._parse_exercises(skill_root / "assets" / "exercises.yaml")
+        citations = list(
+            {
+                (citation.section, citation.locator, citation.excerpt): citation
+                for citation in [
+                    *(item.citation for item in quiz_questions),
+                    *(item.citation for item in flashcards),
+                    *(item.citation for item in exercises),
+                ]
+                if citation is not None
+            }.values()
+        )
 
         chunks = self._build_chunks(
             summary,
@@ -107,6 +119,7 @@ class SkillParser(BaseParser):
             cheat_sheet=cheat_sheet,
             takeaways=takeaways,
             learning_path=learning_path,
+            citations=citations,
             quiz_questions=quiz_questions,
             flashcards=flashcards,
             practice_exercises=exercises,
@@ -242,6 +255,7 @@ class SkillParser(BaseParser):
                     explanation=item.get("explanation", ""),
                     difficulty=Difficulty(item.get("difficulty", "medium")),
                     question_type=QuestionType(item.get("type", "multiple_choice")),
+                    citation=self._parse_citation(item.get("source")),
                 )
             )
         return questions
@@ -254,6 +268,7 @@ class SkillParser(BaseParser):
                     front=item["front"],
                     back=item["back"],
                     tags=item.get("tags", []),
+                    citation=self._parse_citation(item.get("source")),
                 )
             )
         return cards
@@ -269,9 +284,22 @@ class SkillParser(BaseParser):
                     hints=item.get("hints", []),
                     solution=item.get("solution", ""),
                     exercise_type=item.get("type", "open_ended"),
+                    citation=self._parse_citation(item.get("source")),
                 )
             )
         return exercises
+
+    @staticmethod
+    def _parse_citation(data: object) -> SourceCitation | None:
+        if not isinstance(data, dict) or not data.get("section") or not data.get("excerpt"):
+            return None
+        chunk_index = data.get("chunk_index")
+        return SourceCitation(
+            section=str(data["section"]),
+            excerpt=str(data["excerpt"]),
+            locator=str(data.get("locator", "")),
+            chunk_index=chunk_index if isinstance(chunk_index, int) else None,
+        )
 
     def _build_chunks(
         self,

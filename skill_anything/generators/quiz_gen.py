@@ -15,11 +15,17 @@ from pathlib import Path
 
 from skill_anything.generators._budget import allocate_quota
 from skill_anything.generators._concurrent import LLMCache, cache_key, map_llm, resolve_fast_model
+from skill_anything.grounding import (
+    citation_for_chunk,
+    citation_from_evidence,
+    dedupe_by_text,
+    split_sections_for_generation,
+)
 from skill_anything.models import Difficulty, KnowledgeChunk, QuestionType, QuizQuestion, Section
 
 log = logging.getLogger(__name__)
 
-QUIZ_PROMPT_VERSION = "v0.4-grounded"
+QUIZ_PROMPT_VERSION = "v0.4.1-evidence"
 
 _QUIZ_PROMPT = """\
 You are an expert assessment designer creating questions that test deep \
@@ -46,6 +52,8 @@ or approaches.
 - Difficulty distribution: 20% easy, 50% medium, 30% hard
 - Every question must have a thorough explanation (explain *why*, not just restate)
 - Only multiple_choice and scenario types need the "options" field
+- Include one short verbatim quote from the section in "evidence". Copy it
+  exactly; the item will be rejected if the quote cannot be found in the source.
 
 Section content:
 {content}
@@ -59,7 +67,8 @@ Output ONLY a valid JSON array:
     "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
     "answer": "...",
     "explanation": "...",
-    "difficulty": "easy|medium|hard"
+    "difficulty": "easy|medium|hard",
+    "evidence": "An exact supporting quote copied from the section"
   }}
 ]
 """
@@ -78,6 +87,7 @@ class QuizGenerator:
         self.cache_dir = cache_dir
         self.concurrency = concurrency
         self.fast_model = fast_model
+        self.diagnostics: dict[str, int | str] = {"mode": "not-run", "requested": 0, "accepted": 0, "rejected": 0}
 
     def generate(
         self,
@@ -95,20 +105,27 @@ class QuizGenerator:
             n = len(sections_or_chunks) if sections_or_chunks else 1
             total = min(count_per_chunk * n, 40)
 
-        sections = self._coerce_sections(sections_or_chunks)
+        sections = split_sections_for_generation(
+            self._coerce_sections(sections_or_chunks), max_chars=5000,
+        )
+        self.diagnostics = {"mode": "not-run", "requested": total, "accepted": 0, "rejected": 0}
         if not sections:
             return []
 
         try:
             from skill_anything.llm import is_available
             if not is_available():
-                return self._generate_offline(
+                output = self._generate_offline(
                     [c for s in sections for c in s.chunks], total,
                 )
+                self.diagnostics.update(mode="offline", accepted=len(output))
+                return output
         except ImportError:
-            return self._generate_offline(
+            output = self._generate_offline(
                 [c for s in sections for c in s.chunks], total,
             )
+            self.diagnostics.update(mode="offline", accepted=len(output))
+            return output
 
         quotas = allocate_quota(sections, total, min_per_section=1)
         return self._generate_with_llm(sections, quotas)
@@ -159,20 +176,35 @@ class QuizGenerator:
         )
 
         questions: list[QuizQuestion] = []
+        rejected = 0
         for section, items in zip(targets, results):
             if not items:
                 continue
+            requested = quotas.get(section.id, 0)
+            section_questions: list[QuizQuestion] = []
             for item in items:
                 q = self._item_to_question(item)
-                if q is not None:
-                    q.source_chunk = section.chunks[0].chunk_index if section.chunks else 0
-                    questions.append(q)
+                citation = citation_from_evidence(section, item.get("evidence"))
+                if q is None or citation is None or not self._is_well_formed(q):
+                    rejected += 1
+                    continue
+                q.citation = citation
+                q.source_chunk = citation.chunk_index or 0
+                section_questions.append(q)
+            unique = dedupe_by_text(section_questions, lambda item: item.question)
+            questions.extend(unique[:requested])
+            rejected += len(section_questions) - min(len(unique), requested)
         if questions:
-            return questions
+            output = dedupe_by_text(questions, lambda item: item.question)[:sum(quotas.values())]
+            rejected += len(questions) - len(output)
+            self.diagnostics.update(mode="llm", accepted=len(output), rejected=rejected)
+            return output
         log.warning("All quiz calls failed; using offline fallback")
-        return self._generate_offline(
+        output = self._generate_offline(
             [chunk for section in sections for chunk in section.chunks], sum(quotas.values())
         )
+        self.diagnostics.update(mode="offline-fallback", accepted=len(output), rejected=rejected)
+        return output
 
     # ------------------------------------------------------------------
     # Parsing helpers
@@ -205,24 +237,48 @@ class QuizGenerator:
 
     @staticmethod
     def _item_to_question(item: dict) -> QuizQuestion | None:
-        if not item.get("question"):
+        if not isinstance(item, dict):
+            return None
+        question = item.get("question")
+        if not isinstance(question, str) or not question.strip():
             return None
         try:
-            question_type = QuestionType(item.get("type", "multiple_choice"))
+            question_type = QuestionType(str(item.get("type", "multiple_choice")))
         except ValueError:
             question_type = QuestionType.MULTIPLE_CHOICE
         try:
-            difficulty = Difficulty(item.get("difficulty", "medium"))
+            difficulty = Difficulty(str(item.get("difficulty", "medium")))
         except ValueError:
             difficulty = Difficulty.MEDIUM
+        raw_options = item.get("options", [])
+        options = (
+            [str(option).strip() for option in raw_options if str(option).strip()]
+            if isinstance(raw_options, list)
+            else []
+        )
         return QuizQuestion(
-            question=item["question"],
-            options=item.get("options", []),
-            answer=item.get("answer", ""),
-            explanation=item.get("explanation", ""),
+            question=question.strip(),
+            options=options,
+            answer=str(item.get("answer", "")).strip(),
+            explanation=str(item.get("explanation", "")).strip(),
             difficulty=difficulty,
             question_type=question_type,
         )
+
+    @staticmethod
+    def _is_well_formed(question: QuizQuestion) -> bool:
+        if not question.answer.strip() or not question.explanation.strip():
+            return False
+        if question.question_type in {
+            QuestionType.MULTIPLE_CHOICE,
+            QuestionType.SCENARIO,
+        }:
+            options = question.options
+            if len(options) != 4 or len({option.casefold() for option in options}) != 4:
+                return False
+        if question.question_type == QuestionType.TRUE_FALSE:
+            return question.answer.strip().casefold() in {"true", "false"}
+        return True
 
     # Back-compat for tests calling QuizGenerator._parse_response(raw)
     @staticmethod
@@ -247,7 +303,7 @@ class QuizGenerator:
         for chunk in chunks:
             if len(questions) >= max_questions:
                 break
-            sentences = [s.strip() for s in chunk.content.split(".") if len(s.strip()) > 30]
+            sentences = [s.strip() for s in chunk.content.split(".") if len(s.strip()) >= 15]
             for sentence in sentences[:2]:
                 if len(questions) >= max_questions:
                     break
@@ -265,6 +321,7 @@ class QuizGenerator:
                         difficulty=Difficulty.EASY,
                         question_type=QuestionType.MULTIPLE_CHOICE,
                         source_chunk=chunk.chunk_index,
+                        citation=citation_for_chunk(chunk, sentence),
                     )
                 )
         return questions

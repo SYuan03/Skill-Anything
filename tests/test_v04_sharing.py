@@ -29,6 +29,8 @@ def test_web_export_is_self_contained_and_contains_pack(
     assert 'id="pack-data"' in page
     assert "Flashcards" in page
     assert "localStorage" in page
+    assert "Supervised learning uses labeled training data" in page
+    assert "Source:" in page
     assert "<script src=" not in page
     assert "<link rel=" not in page
 
@@ -66,6 +68,7 @@ def test_anki_export_has_import_headers_and_all_cards(
     assert rows[0][0] == "What is ML?"
     assert "skill-anything" in rows[0][2]
     assert "<strong>Answer:</strong>" in rows[-1][1]
+    assert "Source (" in rows[-1][1]
     assert "scenario" in rows[-1][2]
 
 
@@ -134,7 +137,11 @@ def test_fast_and_smart_models_are_actually_routed(
                 }
             )
         return json.dumps(
-            {"summary": "Section summary", "key_concepts": [], "glossary": [], "notes": "Notes"}
+            {
+                "summary": "Section summary", "key_concepts": [],
+                "glossary": [], "notes": "Notes",
+                "evidence": ["Grounded source text."],
+            }
         )
 
     monkeypatch.setattr("skill_anything.llm.is_available", lambda: True)

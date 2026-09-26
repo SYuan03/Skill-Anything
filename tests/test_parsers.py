@@ -27,6 +27,13 @@ def test_text_parser_from_inline():
     assert chunks[0].content
 
 
+def test_text_parser_rejects_missing_file_instead_of_learning_filename(tmp_path):
+    missing = tmp_path / "missing-notes.md"
+
+    with pytest.raises(FileNotFoundError, match="Text source file not found"):
+        TextParser().parse(str(missing))
+
+
 def test_text_parser_markdown_headings():
     parser = TextParser()
     md = "# Introduction\n\nSome intro text here.\n\n## Methods\n\nSome methods text.\n\n## Results\n\nSome results."

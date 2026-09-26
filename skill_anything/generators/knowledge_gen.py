@@ -35,11 +35,23 @@ from skill_anything.generators._concurrent import (
     resolve_fast_model,
     resolve_smart_model,
 )
-from skill_anything.models import GlossaryEntry, KnowledgeChunk, Section, TimelineEntry
+from skill_anything.grounding import (
+    citation_for_chunk,
+    citation_from_evidence,
+    dedupe_by_text,
+    split_sections_for_generation,
+)
+from skill_anything.models import (
+    GlossaryEntry,
+    KnowledgeChunk,
+    Section,
+    SourceCitation,
+    TimelineEntry,
+)
 
 log = logging.getLogger(__name__)
 
-KNOWLEDGE_PROMPT_VERSION = "v0.4-grounded"
+KNOWLEDGE_PROMPT_VERSION = "v0.4.1-evidence"
 
 
 @dataclass
@@ -52,6 +64,7 @@ class KnowledgeOutput:
     cheat_sheet: str = ""
     takeaways: list[str] = field(default_factory=list)
     learning_path: dict[str, list[str]] = field(default_factory=dict)
+    citations: list[SourceCitation] = field(default_factory=list)
 
 
 _SECTION_PROMPT = """\
@@ -71,7 +84,8 @@ Output ONLY valid JSON with these fields:
   "summary": "Concise summary of THIS section only (not the whole document).",
   "key_concepts": ["Concept name: one-sentence explanation", ... up to 5 supported items],
   "glossary": [{{"term": "...", "definition": "...", "related_terms": ["..."]}}, ... only terms present],
-  "notes": "Markdown with ### subheadings, bullet points, key formulas/examples. Self-contained for this section."
+  "notes": "Markdown with ### subheadings, bullet points, key formulas/examples. Self-contained for this section.",
+  "evidence": ["2-5 short exact quotes copied verbatim from the section that support the output"]
 }}
 
 Section content:
@@ -131,28 +145,40 @@ class KnowledgeGenerator:
         self.concurrency = concurrency
         self.fast_model = fast_model
         self.smart_model = smart_model
+        self.diagnostics: dict[str, int | str] = {
+            "mode": "not-run", "windows": 0, "accepted": 0, "rejected": 0,
+        }
 
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
     def generate(self, sections_or_chunks: list) -> KnowledgeOutput:
-        sections = self._coerce_sections(sections_or_chunks)
-        if not sections:
+        source_sections = self._coerce_sections(sections_or_chunks)
+        self.diagnostics = {
+            "mode": "not-run", "windows": 0, "accepted": 0, "rejected": 0,
+        }
+        if not source_sections:
             return KnowledgeOutput(summary="No content to process.")
 
-        chunks = [c for s in sections for c in s.chunks]
+        chunks = [c for s in source_sections for c in s.chunks]
         try:
             from skill_anything.llm import is_available
 
             if not is_available():
-                return self._generate_offline(chunks)
+                output = self._generate_offline(chunks)
+                self.diagnostics.update(mode="offline", accepted=len(output.citations))
+                return output
         except ImportError:
-            return self._generate_offline(chunks)
+            output = self._generate_offline(chunks)
+            self.diagnostics.update(mode="offline", accepted=len(output.citations))
+            return output
 
-        output = self._generate_with_llm(sections)
+        prompt_sections = split_sections_for_generation(source_sections, max_chars=6000)
+        self.diagnostics["windows"] = len(prompt_sections)
+        output = self._generate_with_llm(prompt_sections)
         if not output.timeline:
-            output.timeline = self._build_timeline_from_sections(sections)
+            output.timeline = self._build_timeline_from_sections(source_sections)
         return output
 
     # ------------------------------------------------------------------
@@ -210,22 +236,60 @@ class KnowledgeGenerator:
         section_summaries: list[tuple[str, str]] = []
         concept_pool: list[str] = []
         glossary_pool: list[dict] = []
+        citations: list[SourceCitation] = []
+        rejected = 0
 
         for section, result in zip(sections, section_results):
             if not result:
+                rejected += 1
                 notes_parts.append(f"## {section.title}\n\n_Section processing failed; see source._")
                 continue
-            notes = result.get("notes") or ""
-            summary = result.get("summary") or ""
-            notes_parts.append(f"## {section.title}\n\n{notes.strip()}")
+            raw_evidence = result.get("evidence", [])
+            if not isinstance(raw_evidence, list):
+                raw_evidence = []
+            verified = [
+                citation
+                for quote in raw_evidence
+                if (citation := citation_from_evidence(section, quote)) is not None
+            ]
+            if not verified:
+                rejected += 1
+                log.warning("Rejected ungrounded knowledge output for %s", section.id)
+                notes_parts.append(
+                    f"## {section.title}\n\n_Section output lacked verifiable source evidence._"
+                )
+                continue
+            notes = result.get("notes") if isinstance(result.get("notes"), str) else ""
+            summary = result.get("summary") if isinstance(result.get("summary"), str) else ""
+            evidence_block = "\n".join(
+                f'> Source evidence ({citation.label}): “{citation.excerpt}”'
+                for citation in verified
+            )
+            notes_parts.append(f"## {section.title}\n\n{notes.strip()}\n\n{evidence_block}")
+            citations.extend(verified)
             section_summaries.append((section.title, summary.strip()))
-            concept_pool.extend(c for c in result.get("key_concepts", []) if isinstance(c, str) and c.strip())
-            for g in result.get("glossary", []):
+            raw_concepts = result.get("key_concepts", [])
+            if isinstance(raw_concepts, list):
+                concept_pool.extend(
+                    c for c in raw_concepts if isinstance(c, str) and c.strip()
+                )
+            raw_glossary = result.get("glossary", [])
+            for g in raw_glossary if isinstance(raw_glossary, list) else []:
                 if isinstance(g, dict) and g.get("term"):
                     glossary_pool.append(g)
 
         detailed_notes = "\n\n".join(notes_parts)
         merged_glossary = self._dedup_glossary(glossary_pool)
+
+        if not section_summaries:
+            log.warning("All knowledge outputs failed evidence verification; using offline fallback")
+            output = self._generate_offline(
+                [chunk for section in sections for chunk in section.chunks]
+            )
+            self.diagnostics.update(
+                mode="offline-fallback", accepted=len(output.citations), rejected=rejected,
+            )
+            return output
 
         # Reduce step.
         summaries_block = "\n\n".join(
@@ -261,7 +325,7 @@ class KnowledgeGenerator:
 
         if not reduced:
             # Reduce failed — fall back to using map outputs only.
-            return KnowledgeOutput(
+            output = KnowledgeOutput(
                 summary=" ".join(s for _, s in section_summaries)[:1500],
                 detailed_notes=detailed_notes,
                 key_concepts=concept_pool[:15],
@@ -269,17 +333,36 @@ class KnowledgeGenerator:
                 cheat_sheet="",
                 takeaways=[],
                 learning_path={},
+                citations=dedupe_by_text(citations, lambda item: item.excerpt),
             )
+            self.diagnostics.update(
+                mode="map-only", accepted=len(section_summaries), rejected=rejected,
+            )
+            return output
 
-        return KnowledgeOutput(
-            summary=reduced.get("summary", ""),
+        reduced_concepts = reduced.get("key_concepts")
+        reduced_takeaways = reduced.get("takeaways")
+        reduced_path = reduced.get("learning_path")
+        output = KnowledgeOutput(
+            summary=str(reduced.get("summary", "")),
             detailed_notes=detailed_notes,
-            key_concepts=reduced.get("key_concepts", concept_pool[:15]),
+            key_concepts=(
+                [item for item in reduced_concepts if isinstance(item, str)][:15]
+                if isinstance(reduced_concepts, list)
+                else concept_pool[:15]
+            ),
             glossary=merged_glossary,
-            cheat_sheet=reduced.get("cheat_sheet", ""),
-            takeaways=reduced.get("takeaways", []),
-            learning_path=reduced.get("learning_path", {}),
+            cheat_sheet=str(reduced.get("cheat_sheet", "")),
+            takeaways=(
+                [item for item in reduced_takeaways if isinstance(item, str)][:10]
+                if isinstance(reduced_takeaways, list)
+                else []
+            ),
+            learning_path=reduced_path if isinstance(reduced_path, dict) else {},
+            citations=dedupe_by_text(citations, lambda item: item.excerpt),
         )
+        self.diagnostics.update(mode="llm", accepted=len(section_summaries), rejected=rejected)
+        return output
 
     # ------------------------------------------------------------------
     # Helpers
@@ -396,11 +479,23 @@ class KnowledgeGenerator:
         if not key_concepts:
             key_concepts = [f"Concept {i + 1}" for i in range(min(5, len(chunks)))]
 
+        citations = []
+        for chunk in chunks:
+            candidates = [
+                sentence.strip()
+                for sentence in re.split(r"(?<=[.!?])\s+", chunk.content)
+                if len(sentence.strip()) >= 8
+            ]
+            excerpt = candidates[0] if candidates else chunk.content.strip()[:500]
+            if excerpt:
+                citations.append(citation_for_chunk(chunk, excerpt))
+
         return KnowledgeOutput(
             summary=summary,
             detailed_notes=detailed_notes,
             key_concepts=key_concepts,
             takeaways=[f"Review the core content of {s}" for s in sections_seen[:5]],
+            citations=dedupe_by_text(citations, lambda item: item.excerpt),
         )
 
     # Back-compat: kept so existing tests (test_knowledge_gen_parse_response)

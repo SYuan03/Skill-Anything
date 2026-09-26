@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Skill-Anything CLI — build study packs from source material and optionally export AI skills."""
 
-from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path
@@ -20,6 +18,7 @@ from skill_anything import __version__
 from skill_anything.engine import Engine
 from skill_anything.linting import SkillLinter
 from skill_anything.models import SkillPack, slugify
+from skill_anything.validation import audit_pack
 
 app = typer.Typer(
     name="skill-anything",
@@ -103,7 +102,30 @@ def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") ->
     table.add_row("Detailed Notes", "Y" if pack.detailed_notes else "-", "Structured study notes")
     table.add_row("Cheat Sheet", "Y" if pack.cheat_sheet else "-", "One-page quick reference")
     table.add_row("Learning Path", "Y" if pack.learning_path else "-", "Prerequisites + next steps + resources")
+    grounding = pack.metadata.get("grounding", {})
+    if grounding:
+        cited = grounding.get("cited_interactive_items", 0)
+        total = grounding.get("interactive_items", 0)
+        table.add_row("Source Evidence", f"{cited}/{total}", "Verified citations on learning items")
     console.print(table)
+
+    generation = pack.metadata.get("generation", {})
+    fallback_stages = [
+        name
+        for name, details in generation.items()
+        if isinstance(details, dict) and str(details.get("mode", "")).startswith("offline")
+    ]
+    if fallback_stages:
+        console.print(
+            Panel(
+                "No usable LLM result was available for: "
+                + ", ".join(fallback_stages)
+                + ". These sections use conservative extractive fallback content; "
+                "review them before publishing.",
+                title="Quality notice",
+                border_style="yellow",
+            )
+        )
 
     slug = slugify(pack.title)
     tree = Tree(f"[bold]{output_dir}[/bold]")
@@ -602,6 +624,51 @@ def share(
 # ======================================================================
 
 @app.command()
+def audit(
+    path: str = typer.Argument(..., help="Path to generated pack YAML file"),
+    strict: bool = typer.Option(
+        False, "--strict", help="Fail when any interactive item lacks source evidence",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", "-j", help="Output as JSON"
+    ),
+) -> None:
+    """[bold yellow]Audit[/bold yellow] Check a pack's structure and source-evidence coverage."""
+    try:
+        pack = Engine.load(path)
+        report = audit_pack(pack, strict=strict)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
+
+    if json_output:
+        typer.echo(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
+    else:
+        _show_banner()
+        coverage = report.metrics["citation_coverage"] * 100
+        console.print(
+            Panel(
+                f"[bold]{pack.title}[/bold]\n\n"
+                f"Citation coverage: [cyan]{coverage:.1f}%[/cyan]\n"
+                f"Knowledge evidence quotes: [cyan]{report.metrics['knowledge_evidence']}[/cyan]\n"
+                f"Errors: [red]{len(report.errors)}[/red]  "
+                f"Warnings: [yellow]{len(report.warnings)}[/yellow]",
+                title="Pack Audit",
+                border_style="green" if report.ok else "red",
+            )
+        )
+        for issue in report.issues:
+            color = "red" if issue.severity == "error" else "yellow"
+            console.print(f"[{color}]{issue.severity.upper()}[/{color}] {issue.code}: {issue.message}")
+        if report.ok:
+            console.print("\n[bold green]Audit passed.[/bold green]")
+
+    if not report.ok:
+        raise typer.Exit(1)
+
+
+@app.command()
 def info(
     path: str = typer.Argument(..., help="Path to generated pack YAML file"),
     json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
@@ -627,7 +694,7 @@ def info(
     for key, label in [("key_concepts", "Key Concepts"), ("glossary", "Glossary"),
                        ("timeline", "Outline"), ("quiz_questions", "Quiz Questions"),
                        ("flashcards", "Flashcards"), ("exercises", "Exercises"),
-                       ("takeaways", "Takeaways")]:
+                       ("takeaways", "Takeaways"), ("citations", "Source Evidence")]:
         val = stats.get(key, 0)
         if val:
             table.add_row(label, str(val))

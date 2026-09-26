@@ -117,6 +117,18 @@ def test_map_llm_isolates_failures(tmp_path: Path):
     assert results[4] == "ok-4"
 
 
+def test_map_llm_retries_empty_responses(monkeypatch):
+    attempts = {"n": 0}
+    monkeypatch.setattr("skill_anything.generators._concurrent.time.sleep", lambda _: None)
+
+    def fn(item: str) -> str | None:
+        attempts["n"] += 1
+        return None if attempts["n"] == 1 else f"ok-{item}"
+
+    assert map_llm(["item"], fn, max_retries=1, show_progress=False) == ["ok-item"]
+    assert attempts["n"] == 2
+
+
 def test_map_llm_respects_concurrency_cap():
     in_flight = {"n": 0, "max": 0}
     lock = threading.Lock()
@@ -162,6 +174,7 @@ def test_quiz_generator_covers_every_section(monkeypatch, tmp_path: Path):
                 "answer": "A",
                 "explanation": "...",
                 "difficulty": "medium",
+                "evidence": f"Chapter {m.group(1).split()[-1]} content paragraph 1",
             }
         ])
 
@@ -190,7 +203,11 @@ def test_flashcard_generator_covers_every_section(monkeypatch, tmp_path: Path):
         with lock:
             if m:
                 seen_sections.append(m.group(1))
-        return json.dumps([{"front": "Q", "back": "A", "tags": []}])
+        chapter = m.group(1) if m else "Chapter 1"
+        return json.dumps([{
+            "front": f"Q for {chapter}", "back": "A", "tags": [],
+            "evidence": f"{chapter} content paragraph 1",
+        }])
 
     monkeypatch.setattr("skill_anything.llm.is_available", lambda: True)
     monkeypatch.setattr("skill_anything.llm.chat", fake_chat)
@@ -220,11 +237,14 @@ def test_knowledge_gen_map_reduce_cache_hits_skip_calls(monkeypatch, tmp_path: P
                 "learning_path": {"prerequisites": [], "next_steps": [], "resources": []},
             })
         # Per-section
+        chapter_match = __import__("re").search(r"Chapter (\d+) content", prompt)
+        chapter_number = chapter_match.group(1) if chapter_match else "1"
         return json.dumps({
             "summary": "Sec summary.",
             "key_concepts": ["C1"],
             "glossary": [{"term": "T", "definition": "D", "related_terms": []}],
             "notes": "Notes.",
+            "evidence": [f"Chapter {chapter_number} content paragraph 1"],
         })
 
     monkeypatch.setattr("skill_anything.llm.is_available", lambda: True)
@@ -266,11 +286,14 @@ def test_knowledge_gen_handles_section_failure_gracefully(monkeypatch, tmp_path:
             })
         if n == 2:
             return None  # simulate one section failing
+        chapter_match = __import__("re").search(r"Chapter (\d+) content", prompt)
+        chapter_number = chapter_match.group(1) if chapter_match else "1"
         return json.dumps({
             "summary": "Sec summary.",
             "key_concepts": ["C"],
             "glossary": [],
             "notes": "N",
+            "evidence": [f"Chapter {chapter_number} content paragraph 1"],
         })
 
     monkeypatch.setattr("skill_anything.llm.is_available", lambda: True)

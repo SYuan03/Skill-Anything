@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skill-anything"
-version = "0.4.0"
+version = "0.4.1"
 description = "Turn source material into study packs, offline learning sites, Anki decks, and AI skills"
 readme = "README.md"
 license = "MIT"
@@ -91,3 +91,4 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]  # generated single-file HTML intentionally uses compact long lines

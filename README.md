@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="#v041">v0.4.1</a> •
   <a href="#v04">v0.4</a> •
   <a href="#whats-new-in-v03">v0.3</a> •
   <a href="#whats-new-in-v02">v0.2</a> •
@@ -28,6 +29,33 @@
   <a href="#python-api">API</a> •
   <a href="#faq">FAQ</a>
 </p>
+
+---
+
+<a id="v041"></a>
+
+## v0.4.1 — Trust & Coverage
+
+v0.4.1 hardens the generated material so a successful command means more than valid JSON:
+
+- Every LLM-generated quiz question, flashcard, and exercise must include a verbatim source
+  quote. Skill-Anything verifies the quote against the supplied text and rejects unsupported
+  items.
+- Citations survive YAML round-trips and appear in Markdown, offline sites, Anki cards, and
+  exported Skill assets.
+- Oversized chapters are split into ordered prompt windows instead of silently discarding
+  everything after the first 5–6K characters.
+- `sa audit pack.yaml --strict` provides a deterministic CI gate for citation coverage,
+  duplicates, malformed options, and missing answers or solutions.
+- GitHub Actions now tests Python 3.10–3.13, runs Ruff, and builds a wheel on every push and PR.
+- Inline source text is no longer copied into `source_ref`, and cache writes are atomic.
+
+```bash
+sa audit output/transformer-learning-pack.yaml --strict
+sa audit output/transformer-learning-pack.yaml --strict --json
+```
+
+[Read the complete v0.4.1 release notes](RELEASE_NOTES_v0.4.1.md).
 
 ---
 
@@ -687,6 +715,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `sa review <yaml>` | Flashcard review (multi-round repetition) | `sa review x.yaml -n 20` |
 | `sa info <yaml>` | View generated pack details | `sa info x.yaml --json` |
 | `sa share <yaml>` | Build an offline web site and ready-to-send ZIP | `sa share x.yaml -o ./share/` |
+| `sa audit <yaml>` | Check structure and source-evidence coverage | `sa audit x.yaml --strict` |
 
 ### Export Command
 
@@ -712,7 +741,8 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `--count` | `-n` | `quiz`, `review` | Number of questions / flashcards |
 | `--difficulty` | `-d` | `quiz` | Filter by difficulty: `easy`, `medium`, `hard` |
 | `--no-shuffle` | — | `quiz`, `review` | Keep original order instead of randomizing |
-| `--json` | `-j` | `info` | Output as JSON |
+| `--json` | `-j` | `info`, `audit` | Output as JSON |
+| `--strict` | — | `audit` | Fail if any learning item lacks source evidence |
 | `--concurrency` | `-c` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Parallel LLM calls for per-section map (default 6) |
 | `--no-cache` | — | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Bypass the on-disk LLM call cache |
 | `--no-zip` | — | `share` | Skip the ready-to-send ZIP (included by default) |

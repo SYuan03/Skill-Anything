@@ -15,11 +15,17 @@ from pathlib import Path
 
 from skill_anything.generators._budget import allocate_quota
 from skill_anything.generators._concurrent import LLMCache, cache_key, map_llm, resolve_fast_model
+from skill_anything.grounding import (
+    citation_for_chunk,
+    citation_from_evidence,
+    dedupe_by_text,
+    split_sections_for_generation,
+)
 from skill_anything.models import Difficulty, KnowledgeChunk, PracticeExercise, Section
 
 log = logging.getLogger(__name__)
 
-PRACTICE_PROMPT_VERSION = "v0.4-grounded"
+PRACTICE_PROMPT_VERSION = "v0.4.1-evidence"
 
 _EXERCISE_PROMPT = """\
 You are an expert course designer. Create {count} hands-on exercises based on the section below \
@@ -42,6 +48,8 @@ constraints absent from the source.
 - Include 1-3 helpful hints
 - Provide a reference solution or key solution points
 - Vary difficulty across easy/medium/hard
+- Include one short verbatim quote from the section in "evidence". Copy it
+  exactly; the exercise will be rejected if it is absent from the source.
 
 Section content:
 {content}
@@ -55,7 +63,8 @@ Output ONLY a valid JSON array:
     "type": "analysis|design|implementation|critique|research",
     "difficulty": "easy|medium|hard",
     "hints": ["Hint 1: ...", "Hint 2: ..."],
-    "solution": "Reference solution or key points"
+    "solution": "Reference solution or key points",
+    "evidence": "An exact supporting quote copied from the section"
   }}
 ]
 """
@@ -74,6 +83,7 @@ class PracticeGenerator:
         self.cache_dir = cache_dir
         self.concurrency = concurrency
         self.fast_model = fast_model
+        self.diagnostics: dict[str, int | str] = {"mode": "not-run", "requested": 0, "accepted": 0, "rejected": 0}
 
     def generate(
         self,
@@ -89,20 +99,27 @@ class PracticeGenerator:
             n = len(sections_or_chunks) if sections_or_chunks else 1
             total = min(count_per_chunk * n, 15)
 
-        sections = self._coerce_sections(sections_or_chunks)
+        sections = split_sections_for_generation(
+            self._coerce_sections(sections_or_chunks), max_chars=5000,
+        )
+        self.diagnostics = {"mode": "not-run", "requested": total, "accepted": 0, "rejected": 0}
         if not sections:
             return []
 
         try:
             from skill_anything.llm import is_available
             if not is_available():
-                return self._generate_offline(
+                output = self._generate_offline(
                     [c for s in sections for c in s.chunks], total,
                 )
+                self.diagnostics.update(mode="offline", accepted=len(output))
+                return output
         except ImportError:
-            return self._generate_offline(
+            output = self._generate_offline(
                 [c for s in sections for c in s.chunks], total,
             )
+            self.diagnostics.update(mode="offline", accepted=len(output))
+            return output
 
         quotas = allocate_quota(sections, total, min_per_section=1)
         return self._generate_with_llm(sections, quotas)
@@ -151,19 +168,36 @@ class PracticeGenerator:
         )
 
         exercises: list[PracticeExercise] = []
-        for _, items in zip(targets, results):
+        rejected = 0
+        for section, items in zip(targets, results):
             if not items:
                 continue
+            requested = quotas.get(section.id, 0)
+            section_exercises: list[PracticeExercise] = []
             for item in items:
+                if not isinstance(item, dict):
+                    continue
                 ex = self._item_to_exercise(item)
-                if ex is not None:
-                    exercises.append(ex)
+                citation = citation_from_evidence(section, item.get("evidence"))
+                if ex is None or citation is None or not ex.description.strip() or not ex.solution.strip():
+                    rejected += 1
+                    continue
+                ex.citation = citation
+                section_exercises.append(ex)
+            unique = dedupe_by_text(section_exercises, lambda item: item.title)
+            exercises.extend(unique[:requested])
+            rejected += len(section_exercises) - min(len(unique), requested)
         if exercises:
-            return exercises
+            output = dedupe_by_text(exercises, lambda item: item.title)[:sum(quotas.values())]
+            rejected += len(exercises) - len(output)
+            self.diagnostics.update(mode="llm", accepted=len(output), rejected=rejected)
+            return output
         log.warning("All exercise calls failed; using offline fallback")
-        return self._generate_offline(
+        output = self._generate_offline(
             [chunk for section in sections for chunk in section.chunks], sum(quotas.values())
         )
+        self.diagnostics.update(mode="offline-fallback", accepted=len(output), rejected=rejected)
+        return output
 
     @staticmethod
     def _coerce_sections(items: list) -> list[Section]:
@@ -190,19 +224,27 @@ class PracticeGenerator:
 
     @staticmethod
     def _item_to_exercise(item: dict) -> PracticeExercise | None:
-        if not isinstance(item, dict) or not item.get("title"):
+        if not isinstance(item, dict):
+            return None
+        title = item.get("title")
+        if not isinstance(title, str) or not title.strip():
             return None
         try:
-            difficulty = Difficulty(item.get("difficulty", "medium"))
+            difficulty = Difficulty(str(item.get("difficulty", "medium")))
         except ValueError:
             difficulty = Difficulty.MEDIUM
+        raw_hints = item.get("hints", [])
         return PracticeExercise(
-            title=item["title"],
-            description=item.get("description", ""),
+            title=title.strip(),
+            description=str(item.get("description", "")).strip(),
             difficulty=difficulty,
-            hints=item.get("hints", []),
-            solution=item.get("solution", ""),
-            exercise_type=item.get("type", "open_ended"),
+            hints=(
+                [str(hint).strip() for hint in raw_hints if str(hint).strip()]
+                if isinstance(raw_hints, list)
+                else []
+            ),
+            solution=str(item.get("solution", "")).strip(),
+            exercise_type=str(item.get("type", "open_ended")),
         )
 
     @staticmethod
@@ -224,20 +266,31 @@ class PracticeGenerator:
             if len(exercises) >= max_exercises:
                 break
             section = chunk.section or f"Section {chunk.chunk_index + 1}"
+            sentences = [
+                sentence.strip()
+                for sentence in re.split(r"(?<=[.!?])\s+", chunk.content)
+                if len(sentence.strip()) >= 8
+            ]
+            evidence = sentences[0] if sentences else chunk.content.strip()[:500]
             exercises.append(
                 PracticeExercise(
                     title=f'Summarize the key ideas of "{section}"',
                     description=f'Review the content of "{section}" and produce: '
                     f"(1) 3-5 core concepts with brief explanations, "
-                    f"(2) a paragraph connecting them together, "
-                    f"(3) one real-world application example.",
+                    f"(2) a paragraph connecting them together, and "
+                    f"(3) one claim-to-source evidence table.",
                     difficulty=Difficulty.MEDIUM,
                     hints=[
                         "Read through the content and highlight key terms",
                         "Try to explain the ideas without looking at the source",
-                        "Think about where this knowledge applies in practice",
+                        "Quote the source for every claim you include",
                     ],
                     exercise_type="analysis",
+                    solution=(
+                        "A correct response should identify only ideas explicitly present in "
+                        f'the source and cite them. One verified starting point is: "{evidence}"'
+                    ),
+                    citation=citation_for_chunk(chunk, evidence),
                 )
             )
         return exercises
