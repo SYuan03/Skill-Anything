@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import yaml
 from pathlib import Path
 
 import pytest
+import yaml
 
 from skill_anything.exporters.skill_exporter import SkillExporter
 from skill_anything.models import (

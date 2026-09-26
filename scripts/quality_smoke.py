@@ -16,7 +16,6 @@ from pathlib import Path
 from skill_anything.engine import Engine
 from skill_anything.validation import audit_pack
 
-
 CASES = {
     "short": (
         "# Retry policy\n\nA retry policy uses exponential backoff for transient failures. "

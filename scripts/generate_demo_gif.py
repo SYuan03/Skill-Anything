@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate a high-quality terminal demo GIF for the README."""
 
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 # ── Config ──────────────────────────────────────────────────────
 W, H = 960, 640

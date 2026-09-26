@@ -2,7 +2,6 @@
 """Skill-Anything CLI — build study packs from source material and optionally export AI skills."""
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 

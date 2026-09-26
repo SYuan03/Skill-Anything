@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate a high-quality animated terminal demo GIF for Skill-Anything README."""
 
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 # ── Config ──
 W, H = 1640, 1200  # 2x for retina clarity

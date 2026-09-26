@@ -8,7 +8,6 @@ normalisation.  Generated prose alone is never accepted as evidence.
 
 from __future__ import annotations
 
-import re
 from dataclasses import replace
 
 from skill_anything.models import KnowledgeChunk, Section, SourceCitation

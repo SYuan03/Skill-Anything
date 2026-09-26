@@ -105,7 +105,7 @@ class SkillExporter:
         # Frontmatter
         lines.append("---")
         lines.append(f"name: {slug}")
-        lines.append(f"description: >-")
+        lines.append("description: >-")
         for desc_line in description.split("\n"):
             lines.append(f"  {desc_line}")
         lines.append("version: 1.0.0")
@@ -152,7 +152,7 @@ class SkillExporter:
         lines.append("Run the built-in quiz to test knowledge:")
         lines.append("")
         lines.append("```bash")
-        lines.append(f"python ${{CLAUDE_SKILL_DIR}}/scripts/quiz.py")
+        lines.append("python ${CLAUDE_SKILL_DIR}/scripts/quiz.py")
         lines.append("```")
         lines.append("")
 

@@ -81,6 +81,7 @@ def test_engine_render_study_guide(sample_pack: SkillPack):
 def test_engine_load_and_info(sample_pack: SkillPack):
     """Verify Engine.load can round-trip a SkillPack (used by sa info)."""
     import tempfile
+
     import yaml
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
