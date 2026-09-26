@@ -13,11 +13,15 @@ from skill_anything.models import Flashcard, KnowledgeChunk, Section
 
 log = logging.getLogger(__name__)
 
-FLASHCARD_PROMPT_VERSION = "v0.3"
+FLASHCARD_PROMPT_VERSION = "v0.4-grounded"
 
 _FLASHCARD_PROMPT = """\
 You are an expert in spaced-repetition learning design. Create {count} \
 high-quality flashcards from the section below (titled "{section_title}").
+
+Use only facts stated in the section. Do not introduce external examples,
+requirements, or recommendations. Avoid near-duplicate cards when source
+material is limited.
 
 **Requirements:**
 1. Front: A precise, unambiguous question or concept prompt
@@ -108,6 +112,7 @@ class FlashcardGenerator:
                 [{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=2048,
+                model=fast_model,
             )
             if raw is None:
                 return None
@@ -146,7 +151,12 @@ class FlashcardGenerator:
                             source_chunk=section.chunks[0].chunk_index if section.chunks else 0,
                         )
                     )
-        return cards
+        if cards:
+            return cards
+        log.warning("All flashcard calls failed; using offline fallback")
+        return self._generate_offline(
+            [chunk for section in sections for chunk in section.chunks], sum(quotas.values())
+        )
 
     @staticmethod
     def _coerce_sections(items: list) -> list[Section]:

@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="#v04">v0.4</a> •
   <a href="#whats-new-in-v03">v0.3</a> •
   <a href="#whats-new-in-v02">v0.2</a> •
   <a href="#quick-start">Quick Start</a> •
@@ -27,6 +28,50 @@
   <a href="#python-api">API</a> •
   <a href="#faq">FAQ</a>
 </p>
+
+---
+
+<a id="v04"></a>
+
+## 📣 What's New in v0.4 — Share & Learn
+
+> 🌈 **Turn any study pack into something you can actually hand to another person.**
+
+v0.4 adds portable outputs that work outside the Skill-Anything CLI. A recipient does not
+need Python, an API key, or an internet connection.
+
+- 🌐 **Offline interactive learning site** — one self-contained `index.html` with searchable
+  notes, glossary, quiz mode, flip cards, exercises, dark mode, printing, and progress saved
+  locally in the browser
+- 📦 **One-command share bundle** — `sa share pack.yaml` creates the site plus a ready-to-send
+  ZIP; the same site can be hosted directly on GitHub Pages, Cloudflare Pages, or Netlify
+- 🧠 **Anki integration** — `--format anki` exports flashcards *and* quiz questions as an
+  import-ready UTF-8 TSV with HTML fields and useful tags
+- ✨ **A real `--format all`** — now produces the study guide, structured YAML, agent Skill,
+  offline site, and Anki deck together
+- 🛠️ **Reliability polish** — caches now follow `--output`, unknown formats fail clearly,
+  portable exports avoid unnecessary image API calls, CLI dependencies support modern Click,
+  FAST/SMART model routing now reaches the real API calls, and the documented/default
+  concurrency is consistently 6; long inline text is also handled safely
+- 🎯 **More grounded generation** — quiz/card/exercise counts scale to the available source
+  evidence, and prompts explicitly reject unsupported facts instead of padding short notes
+
+```bash
+# Existing pack → offline site + ZIP. Send the ZIP to anyone.
+sa share output/transformer-learning-pack.yaml
+
+# Generate every human-, browser-, Anki-, and agent-ready format in one run.
+sa repo . --format all
+
+# Or choose one portable integration.
+sa export output/transformer-learning-pack.yaml --format web
+sa export output/transformer-learning-pack.yaml --format anki
+```
+
+The web export contains no CDN scripts, fonts, trackers, or runtime API calls. It is a single
+portable file, so private study material stays local unless you choose to publish it.
+
+[Read the complete v0.4 release notes](RELEASE_NOTES_v0.4.md).
 
 ---
 
@@ -325,11 +370,22 @@ sa export output/my-skill.yaml --format skill
 sa auto textbook.pdf --format all
 ```
 
+### 7. Share It or Move It to Anki
+
+```bash
+# Builds output/my-skill-site/index.html and a ready-to-send ZIP
+sa share output/my-skill.yaml
+
+# Import the generated TSV from Anki's File → Import menu
+sa export output/my-skill.yaml --format anki
+```
+
 ---
 
 ## Output Structure
 
-Every source generates a **study pack** by default. You can also export the same pack as a **SKILL.md directory** for AI tools.
+Every source generates a **study pack** by default. The same pack can also become an agent
+Skill, an offline interactive site, or an Anki deck.
 
 ### Study Format (default)
 
@@ -350,7 +406,26 @@ output/my-skill/
 └── scripts/                   # Standalone quiz runner
 ```
 
-> Use `--format all` to generate both the study pack and the agent skill export at once.
+### Offline Web Format (`--format web`)
+
+```
+output/my-skill-site/
+└── index.html                 # Complete app + content; no server or internet required
+```
+
+Open the file directly, send it to someone, or deploy the directory to any static host.
+Quiz and flashcard progress is stored in that browser's `localStorage`.
+
+### Anki Format (`--format anki`)
+
+```
+output/my-skill-anki.tsv       # Flashcards + quiz questions + topic/type/difficulty tags
+```
+
+In Anki, choose **File → Import** and select the TSV. Separator, HTML mode, and column names
+are embedded in the file, so no add-on is required.
+
+> Use `--format all` to generate the study pack, agent Skill, web site, and Anki deck at once.
 
 ### The 12-Section Study Guide
 
@@ -426,7 +501,9 @@ This is the key mental model:
 
 - `study` is for **humans learning from the material**
 - `skill` is for **AI tools loading the material as a reusable artifact**
-- `all` is for teams or workflows that want both
+- `web` is for **sharing an interactive, installation-free learning site**
+- `anki` is for **spaced repetition in the Anki ecosystem**
+- `all` is for teams or workflows that want every output
 
 ### Generate as Agent Skill Export
 
@@ -439,7 +516,7 @@ sa web https://example.com/article --format skill
 # Or export an existing pack
 sa export output/my-skill.yaml --format skill
 
-# Generate both study pack + skill export
+# Generate every output format
 sa auto paper.pdf --format all
 ```
 
@@ -609,12 +686,13 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `sa quiz <yaml>` | Interactive quiz (6 types, graded A-F) | `sa quiz x.yaml -n 10 -d hard` |
 | `sa review <yaml>` | Flashcard review (multi-round repetition) | `sa review x.yaml -n 20` |
 | `sa info <yaml>` | View generated pack details | `sa info x.yaml --json` |
+| `sa share <yaml>` | Build an offline web site and ready-to-send ZIP | `sa share x.yaml -o ./share/` |
 
 ### Export Command
 
 | Command | Description | Example |
 |:--------|:------------|:--------|
-| `sa export <yaml>` | Export existing YAML to a different format | `sa export x.yaml -f skill -o ./skills/` |
+| `sa export <yaml>` | Export YAML as study, skill, web, Anki, or all | `sa export x.yaml -f web` |
 | `sa import-skill <src>` | Import an existing `SKILL.md` package back into a study pack | `sa import-skill ./my-skill` |
 | `sa lint <src>` | Validate a skill package and fail on blocking issues | `sa lint ./my-skill` |
 
@@ -628,7 +706,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 
 | Option | Short | Applies To | Description |
 |:-------|:------|:-----------|:------------|
-| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto`, `export`, `import-skill` | Output format: `study` (default), `skill` (SKILL.md), `all` |
+| `--format` | `-f` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto`, `export`, `import-skill` | `study`, `skill`, `web`, `anki`, or `all` |
 | `--title` | `-t` | `pdf`, `video`, `web`, `text`, `repo`, `auto`, `import-skill` | Custom title for the generated pack |
 | `--output` | `-o` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto`, `export`, `import-skill` | Output directory (default: `./output`) |
 | `--count` | `-n` | `quiz`, `review` | Number of questions / flashcards |
@@ -637,6 +715,7 @@ $ sa quiz output/transformer.yaml --difficulty hard --count 10
 | `--json` | `-j` | `info` | Output as JSON |
 | `--concurrency` | `-c` | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Parallel LLM calls for per-section map (default 6) |
 | `--no-cache` | — | `pdf`, `video`, `web`, `text`, `audio`, `repo`, `auto` | (v0.3) Bypass the on-disk LLM call cache |
+| `--no-zip` | — | `share` | Skip the ready-to-send ZIP (included by default) |
 
 ---
 
@@ -656,8 +735,13 @@ pack = engine.from_repo(".")
 pack = engine.from_skill("./output/my-skill")
 pack = engine.from_source("auto-detect.pdf")  # auto-detect
 
-# Write to disk (creates .yaml + .md + .png)
+# Write to disk (creates .yaml + .md and an optional concept-map image)
 engine.write(pack, "./output")
+
+# Portable v0.4 outputs
+engine.write_web(pack, "./output")   # self-contained <slug>-site/index.html
+engine.write_anki(pack, "./output")  # Anki-compatible TSV
+engine.write(pack, "./output", format="all")
 
 # Load an existing pack
 pack = Engine.load("output/my-skill.yaml")
@@ -698,6 +782,7 @@ All configuration is done through environment variables (set in `.env` or your s
 | `SKILL_ANYTHING_MODEL` | Chat model name | `gpt-4o` |
 | `SKILL_ANYTHING_MODEL_FAST` | (v0.3) Fast/cheap tier for per-section map calls. Falls back to `SKILL_ANYTHING_MODEL` | — |
 | `SKILL_ANYTHING_MODEL_SMART` | (v0.3) Stronger tier for global reduce call. Falls back to `SKILL_ANYTHING_MODEL` | — |
+| `SKILL_ANYTHING_CONCURRENCY` | Concurrent per-section LLM calls | `6` |
 | `SKILL_ANYTHING_IMAGE_API_BASE` | Image generation base URL. Falls back to `SKILL_ANYTHING_API_BASE` | — |
 | `SKILL_ANYTHING_IMAGE_MODEL` | Image model name | `dall-e-3` |
 | `SKILL_ANYTHING_PROXY` | HTTP proxy for API requests. Falls back to `HTTPS_PROXY` / `HTTP_PROXY` | — |
@@ -709,6 +794,9 @@ The `.env` file is loaded automatically from the current working directory or th
 SKILL_ANYTHING_API_KEY=sk-your-api-key-here
 SKILL_ANYTHING_API_BASE=https://api.openai.com/v1
 SKILL_ANYTHING_MODEL=gpt-4o
+# SKILL_ANYTHING_MODEL_FAST=gpt-4o-mini
+# SKILL_ANYTHING_MODEL_SMART=gpt-4o
+# SKILL_ANYTHING_CONCURRENCY=6
 SKILL_ANYTHING_IMAGE_API_BASE=https://api.openai.com/v1
 SKILL_ANYTHING_IMAGE_MODEL=dall-e-3
 # SKILL_ANYTHING_PROXY=http://127.0.0.1:7890
@@ -741,7 +829,8 @@ Skill-Anything/
 │   │   └── visual_gen.py       # AI-generated concept map images
 │   ├── exporters/
 │   │   ├── __init__.py         # Exporter registry
-│   │   └── skill_exporter.py   # SKILL.md export (Claude Code / Cursor / Codex)
+│   │   ├── skill_exporter.py   # SKILL.md export (Claude Code / Cursor / Codex)
+│   │   └── portable_exporter.py # Offline web site + Anki TSV exports
 │   └── interactive/
 │       ├── quiz_runner.py      # CLI interactive quiz with grading
 │       └── review_runner.py    # CLI flashcard review with multi-round repetition

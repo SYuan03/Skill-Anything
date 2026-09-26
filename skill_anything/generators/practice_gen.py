@@ -19,12 +19,16 @@ from skill_anything.models import Difficulty, KnowledgeChunk, PracticeExercise, 
 
 log = logging.getLogger(__name__)
 
-PRACTICE_PROMPT_VERSION = "v0.3"
+PRACTICE_PROMPT_VERSION = "v0.4-grounded"
 
 _EXERCISE_PROMPT = """\
 You are an expert course designer. Create {count} hands-on exercises based on the section below \
 (titled "{section_title}"). These are NOT quiz questions — they are tasks that ask the learner \
 to actively apply, build, or analyse something.
+
+Ground every exercise and reference solution in the supplied section. A task
+may ask the learner to apply an idea, but it must not assume tools, facts, or
+constraints absent from the source.
 
 **Exercise types:**
 - **analysis**: Given a case/dataset/situation, analyze and draw conclusions
@@ -123,6 +127,7 @@ class PracticeGenerator:
                 [{"role": "user", "content": prompt}],
                 temperature=0.4,
                 max_tokens=2560,
+                model=fast_model,
             )
             if raw is None:
                 return None
@@ -153,7 +158,12 @@ class PracticeGenerator:
                 ex = self._item_to_exercise(item)
                 if ex is not None:
                     exercises.append(ex)
-        return exercises
+        if exercises:
+            return exercises
+        log.warning("All exercise calls failed; using offline fallback")
+        return self._generate_offline(
+            [chunk for section in sections for chunk in section.chunks], sum(quotas.values())
+        )
 
     @staticmethod
     def _coerce_sections(items: list) -> list[Section]:

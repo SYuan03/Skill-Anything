@@ -73,6 +73,15 @@ def cache_key(prompt: str, model: str, version: str = "v1") -> str:
     return h.hexdigest()[:16]
 
 
+def _is_retryable_error(error: Exception) -> bool:
+    """Avoid spending retries on deterministic client/request errors."""
+    response = getattr(error, "response", None)
+    status = getattr(response, "status_code", None)
+    if isinstance(status, int) and 400 <= status < 500:
+        return status in {408, 409, 425, 429}
+    return True
+
+
 class LLMCache:
     """JSON-per-call disk cache. One file per (prompt, model) hash."""
 
@@ -181,9 +190,11 @@ def map_llm(
                 return idx, value
             except Exception as e:
                 last_err = e
-                if attempt < max_retries:
+                if attempt < max_retries and _is_retryable_error(e):
                     # Exponential backoff: 1s, 2s, 4s ...
                     time.sleep(min(2**attempt, 8))
+                else:
+                    break
         log.warning("map_llm item %d failed after retries: %s", idx, last_err)
         return idx, None
 

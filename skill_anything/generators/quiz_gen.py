@@ -19,14 +19,18 @@ from skill_anything.models import Difficulty, KnowledgeChunk, QuestionType, Quiz
 
 log = logging.getLogger(__name__)
 
-QUIZ_PROMPT_VERSION = "v0.3"
+QUIZ_PROMPT_VERSION = "v0.4-grounded"
 
 _QUIZ_PROMPT = """\
 You are an expert assessment designer creating questions that test deep \
 understanding, not just surface recall. Generate {count} high-quality questions \
 from the section below (titled "{section_title}").
 
-**Use a mix of these 6 question types:**
+Every question and answer must be supported by the section text alone. Do not
+invent facts, tools, scenarios, constraints, or recommended behavior. If the
+section is short, favor direct recall/comprehension and avoid artificial detail.
+
+**Use a mix of these 6 question types when the requested count allows:**
 
 1. **multiple_choice** — 4 options, only one correct. Distractors must be \
 plausible (no obviously wrong answers).
@@ -131,6 +135,7 @@ class QuizGenerator:
                 [{"role": "user", "content": prompt}],
                 temperature=0.4,
                 max_tokens=3072,
+                model=fast_model,
             )
             if raw is None:
                 return None
@@ -162,7 +167,12 @@ class QuizGenerator:
                 if q is not None:
                     q.source_chunk = section.chunks[0].chunk_index if section.chunks else 0
                     questions.append(q)
-        return questions
+        if questions:
+            return questions
+        log.warning("All quiz calls failed; using offline fallback")
+        return self._generate_offline(
+            [chunk for section in sections for chunk in section.chunks], sum(quotas.values())
+        )
 
     # ------------------------------------------------------------------
     # Parsing helpers

@@ -7,10 +7,11 @@ Pipeline:  Source -> Parser -> Section[] (each containing KnowledgeChunk[])
 from __future__ import annotations
 
 import logging
+import math
 import os
 from pathlib import Path
 
-from skill_anything.exporters.skill_exporter import SkillExporter
+from skill_anything.exporters import AnkiExporter, SkillExporter, WebExporter
 from skill_anything.generators.flashcard_gen import FlashcardGenerator
 from skill_anything.generators.knowledge_gen import KnowledgeGenerator
 from skill_anything.generators.practice_gen import PracticeGenerator
@@ -40,18 +41,22 @@ class Engine:
         *,
         concurrency: int | None = None,
         cache_enabled: bool = True,
+        cache_dir: str | Path | None = None,
     ) -> None:
         if concurrency is None:
             try:
-                concurrency = int(os.getenv("SKILL_ANYTHING_CONCURRENCY", "4"))
+                concurrency = int(os.getenv("SKILL_ANYTHING_CONCURRENCY", "6"))
             except ValueError:
-                concurrency = 4
+                concurrency = 6
         self.concurrency = max(1, concurrency)
         self.cache_enabled = cache_enabled
+        self.cache_dir = Path(cache_dir) if cache_dir is not None else Path("./output/.skill-anything")
         # Generators are created per-call inside _build so we can wire the
         # output-specific cache directory in.
         self.visual_gen = VisualGenerator()
         self.skill_exporter = SkillExporter()
+        self.web_exporter = WebExporter()
+        self.anki_exporter = AnkiExporter()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -85,9 +90,12 @@ class Engine:
         from skill_anything.parsers.text_parser import TextParser
 
         sections = TextParser().parse_sections(source)
-        p = Path(source)
+        looks_like_path = "\n" not in source and len(source) < 512
+        p = Path(source) if looks_like_path else None
         auto_title = title or (
-            p.stem.replace("_", " ").replace("-", " ").title() if p.exists() else "Text Content"
+            p.stem.replace("_", " ").replace("-", " ").title()
+            if p is not None and p.exists()
+            else "Text Content"
         )
         return self._build(sections, SourceType.TEXT, source, auto_title)
 
@@ -141,26 +149,35 @@ class Engine:
         """Write SkillPack to disk.
 
         Args:
-            format: "study" (YAML + Markdown + PNG), "skill" (SKILL.md directory),
-                    or "all" (both formats).
+            format: ``study`` (YAML + Markdown + PNG), ``skill`` (SKILL.md),
+                    ``web`` (offline site), ``anki`` (importable TSV), or
+                    ``all`` (every format).
         """
         import yaml
+
+        format = "web" if format == "portal" else format.lower()
+        supported = {"study", "skill", "web", "anki", "all"}
+        if format not in supported:
+            choices = ", ".join(sorted(supported))
+            raise ValueError(f"Unknown output format '{format}'. Choose one of: {choices}")
 
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         slug = slugify(pack.title)
 
-        image_filename = f"{slug}-concept-map.png"
-        image_path = out / image_filename
-        # v0.3 fix: generate once for all formats. Previously format="skill"
-        # accidentally invoked visual_gen twice (first call's result was
-        # discarded by the surrounding control flow).
-        image_result = self.visual_gen.generate(
-            pack.title,
-            pack.key_concepts,
-            pack.chunks,
-            output_path=str(image_path),
-        )
+        image_filename: str | None = None
+        image_path: Path | None = None
+        image_result: str | None = None
+        # Portable-only exports never need an image API call.
+        if format in {"study", "skill", "all"}:
+            image_filename = f"{slug}-concept-map.png"
+            image_path = out / image_filename
+            image_result = self.visual_gen.generate(
+                pack.title,
+                pack.key_concepts,
+                pack.chunks,
+                output_path=str(image_path),
+            )
 
         if format in ("study", "all"):
             yaml_path = out / f"{slug}.yaml"
@@ -183,8 +200,14 @@ class Engine:
             )
 
         if format in ("skill", "all"):
-            concept_map_src = image_path if image_result else None
+            concept_map_src = image_path if image_result and image_path else None
             self.skill_exporter.export(pack, out, concept_map_src=concept_map_src)
+
+        if format in ("web", "all"):
+            self.web_exporter.export(pack, out)
+
+        if format in ("anki", "all"):
+            self.anki_exporter.export(pack, out)
 
         return out
 
@@ -207,6 +230,14 @@ class Engine:
             out,
             concept_map_src=image_path if image_result else None,
         )
+
+    def write_web(self, pack: SkillPack, output_dir: str | Path) -> Path:
+        """Write a dependency-free interactive web site and return ``index.html``."""
+        return self.web_exporter.export(pack, output_dir)
+
+    def write_anki(self, pack: SkillPack, output_dir: str | Path) -> Path:
+        """Write an Anki-compatible TSV and return its path."""
+        return self.anki_exporter.export(pack, output_dir)
 
     @staticmethod
     def load(path: str) -> SkillPack:
@@ -290,15 +321,10 @@ class Engine:
                 summary="No content could be extracted.",
             )
 
-        # Build cache dir under the eventual output directory. We don't have
-        # output_dir at this point (set later in write()), so cache lives
-        # alongside source-ref-derived slug in a tmp default and is moved
-        # into output/.skill-anything/<slug>/ on write. For now, scope by
-        # title slug under ./output (matches default --output).
         slug = slugify(title)
         cache_root: Path | None = None
         if self.cache_enabled:
-            cache_root = Path("./output") / ".skill-anything" / slug
+            cache_root = self.cache_dir / slug
 
         knowledge_gen = KnowledgeGenerator(
             cache_dir=cache_root, concurrency=self.concurrency,
@@ -320,10 +346,11 @@ class Engine:
             len(sections), len(chunks), source_ref,
         )
 
+        budgets = self._adaptive_generation_budgets(sections)
         knowledge = knowledge_gen.generate(sections)
-        quiz_questions = quiz_gen.generate(sections)
-        flashcards = flashcard_gen.generate(sections)
-        exercises = practice_gen.generate(sections)
+        quiz_questions = quiz_gen.generate(sections, total=budgets["quiz"])
+        flashcards = flashcard_gen.generate(sections, total=budgets["flashcards"])
+        exercises = practice_gen.generate(sections, total=budgets["exercises"])
 
         return SkillPack(
             title=title,
@@ -348,8 +375,31 @@ class Engine:
                 "total_flashcards": len(flashcards),
                 "total_exercises": len(exercises),
                 "total_glossary": len(knowledge.glossary),
+                "generation_budget": budgets,
             },
         )
+
+    @staticmethod
+    def _adaptive_generation_budgets(sections: list) -> dict[str, int]:
+        """Scale output volume to evidence available while preserving coverage.
+
+        Asking a model for dozens of distinct facts from a tiny note encourages
+        repetition and invention. Long sources still reach the established v0.3
+        caps, while short sources request at least one item per section.
+        """
+        section_count = len(sections)
+        total_chars = sum(section.total_chars for section in sections)
+
+        def target(cap: int, chars_per_item: int) -> int:
+            coverage_floor = min(section_count, cap)
+            evidence_target = math.ceil(total_chars / chars_per_item)
+            return min(cap, max(coverage_floor, evidence_target, 1))
+
+        return {
+            "quiz": target(30, 180),
+            "flashcards": target(40, 120),
+            "exercises": target(10, 500),
+        }
 
     # ------------------------------------------------------------------
     # Markdown study guide

@@ -39,7 +39,7 @@ from skill_anything.models import GlossaryEntry, KnowledgeChunk, Section, Timeli
 
 log = logging.getLogger(__name__)
 
-KNOWLEDGE_PROMPT_VERSION = "v0.3-mapreduce"
+KNOWLEDGE_PROMPT_VERSION = "v0.4-grounded"
 
 
 @dataclass
@@ -57,15 +57,20 @@ class KnowledgeOutput:
 _SECTION_PROMPT = """\
 You are extracting study material from one section of a larger document.
 
+Ground every statement in the supplied section. Do not introduce tools, facts,
+examples, recommendations, or requirements that the section does not contain.
+Keep the amount of output proportional to the amount of source evidence; never
+pad a short section to meet a word or item target.
+
 Section title: {title}
 Section position: {position} of {total}
 
 Output ONLY valid JSON with these fields:
 
 {{
-  "summary": "120-200 word summary of THIS section only (not the whole document).",
-  "key_concepts": ["Concept name: one-sentence explanation", ... 2-5 items],
-  "glossary": [{{"term": "...", "definition": "...", "related_terms": ["..."]}}, ... 2-6 items],
+  "summary": "Concise summary of THIS section only (not the whole document).",
+  "key_concepts": ["Concept name: one-sentence explanation", ... up to 5 supported items],
+  "glossary": [{{"term": "...", "definition": "...", "related_terms": ["..."]}}, ... only terms present],
   "notes": "Markdown with ### subheadings, bullet points, key formulas/examples. Self-contained for this section."
 }}
 
@@ -82,6 +87,10 @@ The document has {n} sections. Each per-section summary is shown below in
 reading order. Use them — plus the merged concept list and glossary terms —
 to produce a coherent, document-level study package.
 
+Use only claims present in those inputs. Do not add outside facts or recommend
+resources that were not explicitly named. Prefer a shorter faithful result over
+padding to a target length.
+
 Per-section summaries:
 {summaries}
 
@@ -94,14 +103,14 @@ Merged glossary terms:
 Output ONLY valid JSON:
 
 {{
-  "summary": "300-500 word summary of the WHOLE document.",
-  "key_concepts": ["Concept: explanation", ... 10-15 globally important items, ranked],
+  "summary": "Concise summary of the WHOLE document, proportional to its content.",
+  "key_concepts": ["Concept: explanation", ... up to 15 globally important items, ranked],
   "cheat_sheet": "Markdown quick-reference covering the whole document. Tables/bullets, dense.",
-  "takeaways": ["Verb-first action", ... 5-10 items],
+  "takeaways": ["Verb-first action", ... up to 10 source-grounded items],
   "learning_path": {{
     "prerequisites": ["..."],
     "next_steps": ["..."],
-    "resources": ["..."]
+    "resources": ["Only resources explicitly named in the source; otherwise empty"]
   }}
 }}
 """
@@ -170,6 +179,7 @@ class KnowledgeGenerator:
                 [{"role": "user", "content": prompt}],
                 temperature=0.2,
                 max_tokens=2048,
+                model=fast_model,
             )
             if raw is None:
                 return None
@@ -190,6 +200,10 @@ class KnowledgeGenerator:
             ),
             label=f"Knowledge (map) [{fast_model}]",
         )
+
+        if not any(section_results):
+            log.warning("All knowledge map calls failed; using offline fallback")
+            return self._generate_offline([c for section in sections for c in section.chunks])
 
         # Assemble detailed_notes deterministically + collect concepts/glossary.
         notes_parts: list[str] = []
@@ -239,6 +253,7 @@ class KnowledgeGenerator:
                 [{"role": "user", "content": reduce_prompt}],
                 temperature=0.2,
                 max_tokens=4096,
+                model=smart_model,
             )
             reduced = self._parse_json_object(raw) if raw else None
             if reduced:

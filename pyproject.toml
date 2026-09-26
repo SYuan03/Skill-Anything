@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skill-anything"
-version = "0.3.0"
-description = "Turn source material into study packs with quizzes, flashcards, notes, and optional SKILL.md exports for AI tools"
+version = "0.4.0"
+description = "Turn source material into study packs, offline learning sites, Anki decks, and AI skills"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -24,6 +24,8 @@ keywords = [
     "llm",
     "ai-education",
     "spaced-repetition",
+    "anki",
+    "static-site",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -39,7 +41,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "typer>=0.9.0",
+    "typer>=0.16.0",
     "rich>=13.0.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",

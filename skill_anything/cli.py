@@ -23,7 +23,10 @@ from skill_anything.models import SkillPack, slugify
 
 app = typer.Typer(
     name="skill-anything",
-    help="Skill-Anything: turn source material, repos, and skills into study packs and SKILL.md exports",
+    help=(
+        "Skill-Anything: turn source material into study packs, offline sites, "
+        "Anki decks, and SKILL.md exports"
+    ),
     add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
@@ -38,12 +41,21 @@ _BANNER = r"""[bold cyan]
  |____/|_|\_\_|_|_|   /_/   \_\_| |_|\__, |\__|_| |_|_|_| |_|\__, |
                                       |___/                    |___/
 [/bold cyan]
-[dim]Any Source -> Study Pack -> Optional Skill Export — v{version}[/dim]
+[dim]Any Source -> Learn -> Share -> Reuse — v{version}[/dim]
 """
 
 
 def _show_banner() -> None:
     console.print(_BANNER.format(version=__version__))
+
+
+def _make_engine(output: str, concurrency: int, no_cache: bool) -> Engine:
+    """Build an engine whose cache follows the selected output directory."""
+    return Engine(
+        concurrency=concurrency,
+        cache_enabled=not no_cache,
+        cache_dir=Path(output) / ".skill-anything",
+    )
 
 
 def _handle_error(e: Exception) -> None:
@@ -55,6 +67,7 @@ def _handle_error(e: Exception) -> None:
 
 
 def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") -> None:
+    format = "web" if format == "portal" else format.lower()
     console.print()
     summary_text = f"{pack.summary[:150]}..." if len(pack.summary) > 150 else pack.summary
     console.print(
@@ -119,6 +132,14 @@ def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") ->
                 for f in sorted((skill_dir / "scripts").iterdir()):
                     scripts.add(f"[green]{f.name}[/green]")
 
+    if format in ("web", "all"):
+        tree.add(
+            f"[magenta]{slug}-site/index.html[/magenta]  <- offline interactive learning site"
+        )
+
+    if format in ("anki", "all"):
+        tree.add(f"[yellow]{slug}-anki.tsv[/yellow]  <- import into Anki")
+
     console.print()
     console.print(tree)
 
@@ -176,6 +197,7 @@ def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") ->
             f"[bold]sa quiz[/bold] {output_dir / f'{slug}.yaml'}       [dim]# interactive quiz[/dim]\n"
             f"[bold]sa review[/bold] {output_dir / f'{slug}.yaml'}     [dim]# flashcard review[/dim]\n"
             f"[bold]sa info[/bold] {output_dir / f'{slug}.yaml'}       [dim]# view full details[/dim]\n"
+            f"[bold]open[/bold] {output_dir / f'{slug}-site/index.html'}  [dim]# shareable offline site[/dim]\n"
             f"[bold]cp -r[/bold] {output_dir / slug} ~/.claude/skills/  [dim]# optional AI skill export[/dim]",
             title="Next Steps",
             border_style="dim cyan",
@@ -189,6 +211,20 @@ def _show_result(pack: SkillPack, output_dir: Path, *, format: str = "study") ->
             title="Use as AI Skill",
             border_style="dim cyan",
         ))
+    elif format == "web":
+        console.print(Panel(
+            f"Open [bold]{output_dir / f'{slug}-site/index.html'}[/bold] in any browser.\n"
+            "It works offline and can be hosted directly on GitHub Pages.",
+            title="Share the Learning Site",
+            border_style="magenta",
+        ))
+    elif format == "anki":
+        console.print(Panel(
+            f"Import [bold]{output_dir / f'{slug}-anki.tsv'}[/bold] into Anki.\n"
+            "The file already declares its separator, HTML mode, fields, and tags.",
+            title="Study in Anki",
+            border_style="yellow",
+        ))
     console.print()
 
 
@@ -201,8 +237,10 @@ def pdf(
     path: str = typer.Argument(..., help="Path to PDF file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]PDF -> Study Pack[/bold cyan] Extract knowledge from a PDF and generate a full learning pack."""
@@ -211,7 +249,7 @@ def pdf(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_pdf(path, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -226,8 +264,10 @@ def video(
     source: str = typer.Argument(..., help="YouTube URL or path to video/subtitle file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Video -> Study Pack[/bold cyan] Extract knowledge from a video and generate a full learning pack."""
@@ -236,7 +276,7 @@ def video(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcript -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_video(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -251,8 +291,10 @@ def web(
     url: str = typer.Argument(..., help="Webpage URL"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Web -> Study Pack[/bold cyan] Extract knowledge from a webpage and generate a full learning pack."""
@@ -261,7 +303,7 @@ def web(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Scraping -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_web(url, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -276,8 +318,10 @@ def text(
     source: str = typer.Argument(..., help="Path to text/Markdown file, or inline text"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Text -> Study Pack[/bold cyan] Generate a full learning pack from text or Markdown."""
@@ -286,7 +330,7 @@ def text(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Extracting -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_text(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -301,8 +345,10 @@ def audio(
     path: str = typer.Argument(..., help="Path to audio file (.mp3, .wav, .m4a, .aac, .flac, .ogg, .wma)"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Audio -> Study Pack[/bold cyan] Transcribe audio and generate a full learning pack."""
@@ -311,7 +357,7 @@ def audio(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Transcribing -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_audio(path, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -329,8 +375,10 @@ def auto(
     ),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold green]Auto -> Pack[/bold green] Auto-detect source type and generate a full learning pack."""
@@ -339,7 +387,7 @@ def auto(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Detecting -> Extracting -> Generating study pack...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_source(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -354,8 +402,10 @@ def repo(
     source: str = typer.Argument(..., help="Path to a local repository or a public GitHub repo URL"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
-    concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrent LLM calls (v0.3)"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrent LLM calls"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Disable per-section LLM cache (v0.3)"),
 ) -> None:
     """[bold cyan]Repo -> Study Pack[/bold cyan] Extract onboarding knowledge from a code repository."""
@@ -364,7 +414,7 @@ def repo(
     try:
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
             progress.add_task("Docs-first scan -> Notes -> Quiz -> Flashcards -> Exercises...", total=None)
-            engine = Engine(concurrency=concurrency, cache_enabled=not no_cache)
+            engine = _make_engine(output, concurrency, no_cache)
             pack = engine.from_repo(source, title=title)
             engine.write(pack, output, format=format)
         _show_result(pack, Path(output), format=format)
@@ -379,7 +429,9 @@ def import_skill(
     source: str = typer.Argument(..., help="Path to a skill directory or SKILL.md file"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Generated pack title"),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("study", "--format", "-f", help="Output format: study, skill, or all"),
+    format: str = typer.Option(
+        "study", "--format", "-f", help="Output: study, skill, web, anki, or all"
+    ),
 ) -> None:
     """[bold cyan]Import Skill[/bold cyan] Convert an existing SKILL.md package back into a study pack."""
     _show_banner()
@@ -466,7 +518,9 @@ def review(
 @app.command()
 def export(
     path: str = typer.Argument(..., help="Path to generated pack YAML file"),
-    format: str = typer.Option("skill", "--format", "-f", help="Export format: study, skill, or all"),
+    format: str = typer.Option(
+        "skill", "--format", "-f", help="Export: study, skill, web, anki, or all"
+    ),
     output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
 ) -> None:
     """[bold yellow]Export[/bold yellow] Convert an existing YAML pack to a different format.
@@ -477,18 +531,70 @@ def export(
     Export as study guide (Markdown):
       sa export output/my-skill.yaml --format study
 
-    Export both formats:
+    Export as a shareable offline site or Anki deck:
+      sa export output/my-skill.yaml --format web
+      sa export output/my-skill.yaml --format anki
+
+    Export every format:
       sa export output/my-skill.yaml --format all
     """
     _show_banner()
     console.print(f"[bold]Loading:[/bold] [cyan]{path}[/cyan]")
     console.print(f"[bold]Format:[/bold] [cyan]{format}[/cyan]\n")
-    pack = Engine.load(path)
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        progress.add_task(f"Exporting as {format}...", total=None)
-        engine = Engine()
-        engine.write(pack, output, format=format)
-    _show_result(pack, Path(output), format=format)
+    try:
+        pack = Engine.load(path)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            progress.add_task(f"Exporting as {format}...", total=None)
+            engine = Engine()
+            engine.write(pack, output, format=format)
+        _show_result(pack, Path(output), format=format)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
+
+
+@app.command()
+def share(
+    path: str = typer.Argument(..., help="Path to generated pack YAML file"),
+    output: str = typer.Option("./output", "--output", "-o", help="Output directory"),
+    no_zip: bool = typer.Option(False, "--no-zip", help="Skip the ready-to-send ZIP archive"),
+) -> None:
+    """[bold magenta]Share[/bold magenta] Build an offline learning site and ZIP it."""
+    from shutil import make_archive
+
+    _show_banner()
+    try:
+        pack = Engine.load(path)
+        index = Engine().write_web(pack, output)
+        archive: Path | None = None
+        if not no_zip:
+            site_dir = index.parent
+            archive = Path(
+                make_archive(
+                    str(site_dir),
+                    "zip",
+                    root_dir=str(site_dir.parent),
+                    base_dir=site_dir.name,
+                )
+            )
+
+        message = (
+            f"[bold green]Share bundle ready![/bold green]\n\n"
+            f"Site: [cyan]{index}[/cyan]"
+        )
+        if archive:
+            message += f"\nZIP:  [magenta]{archive}[/magenta]"
+        message += "\n\nThe site is self-contained and works without Python or internet access."
+        console.print(Panel(message, title="📣 Share & Learn", border_style="magenta"))
+    except typer.Exit:
+        raise
+    except Exception as e:
+        _handle_error(e)
 
 
 # ======================================================================
